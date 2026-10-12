@@ -145,15 +145,25 @@ def _detail_text(c, note=""):
     """Candidate details as plain lines for the email body and the test inbox (empty if none were given).
     A line whose value already appears in the note is left out, so nothing is said twice."""
     x = c.get("ext") or {}
-    edu = ", ".join(v for v in (x.get("school"), x.get("major"), x.get("grad"), ("GPA %s" % x["gpa"]) if x.get("gpa") != "" and x.get("gpa") is not None else "") if v)
-    rows = [("Phone", x.get("phone")), ("Headline", x.get("headline")), ("Resume", x.get("resume")),
+    skills = ", ".join(c.get("skills") or [])
+    exp = ("%s year%s" % (c["years"], "" if c.get("years") == 1 else "s")) if c.get("years") else ""
+    edu =", ".join(v for v in (x.get("school"), x.get("major"), x.get("grad"), ("GPA %s" % x["gpa"]) if x.get("gpa") != "" and x.get("gpa") is not None else "") if v)
+    rows = [("Applicant", c.get("name")), ("Email", c.get("email")), ("Current or target title", c.get("title")),
+            ("Experience", exp), ("Location", c.get("loc")), ("Skills", skills),
+            ("Phone", x.get("phone")), ("Headline", x.get("headline")), ("Resume", x.get("resume")),
             ("LinkedIn", x.get("linkedin")), ("Portfolio", x.get("portfolio")), ("Education", edu),
             ("Most recent employer", x.get("employer")),
             ("Work authorization", _AUTH.get(x.get("auth"), "") + ("; needs sponsorship" if x.get("sponsor") == "yes" else "; no sponsorship needed" if x.get("sponsor") == "no" else "") if x.get("auth") else ""),
             ("Earliest start", _START.get(x.get("start"), "")),
             ("Looking for", ", ".join(_TYPES[t] for t in x.get("types", [])))]
     lines = ["%s: %s" % (k, v) for k, v in rows if v and str(v) not in note]
-    return ("\n\nCandidate details\n" + "\n".join(lines)) if lines else ""
+    return ("\n\nApplication details\n" + "\n".join(lines)) if lines else ""
+
+
+def _application_text(c, job, note=""):
+    """The application as the recruiter reads it: the applicant's details. A cover note is included only if one was written."""
+    body = note.strip() or "%s applied for the %s position at %s through Aply." % (c["name"], job["role"], job["co"])
+    return body + _detail_text(c, note)
 
 
 def _validate(p):
@@ -174,9 +184,9 @@ def _validate(p):
         return "Add your name in Profile, Settings first."
     if not EMAIL_RE.match(_s(prof.get("email"), 200)):
         return "Add a valid email in Profile, Settings so the recruiter can reply."
-    note = p.get("note")
-    if not isinstance(note, str) or not note.strip() or len(note) > 4000:
-        return "The note must be between 1 and 4000 characters."
+    note = p.get("note", "")                       # optional: the application is the profile, not a message
+    if note is not None and (not isinstance(note, str) or len(note) > 4000):
+        return "The note must be at most 4000 characters."
     return None
 
 
@@ -193,7 +203,7 @@ def _send_email(cfg, to, cand, job, note, original=""):
     test = _redirect(cfg) == to
     msg["Subject"] = "%sApplication: %s - %s" % ("[TEST] " if test else "", job["role"], cand["name"])
     extra = ("\nTest redirect: this would have gone to %s.\n" % (original or "the company's application page")) if test else ""
-    msg.set_content("%s%s\n\n--\nSent through Aply on behalf of %s <%s>.\nPosting: %s\n%s" % (note, _detail_text(cand, note), cand["name"], cand["email"], job["url"], extra))
+    msg.set_content("%s\n\n--\nSent through Aply on behalf of %s <%s>.\nPosting: %s\n%s" % (_application_text(cand, job, note), cand["name"], cand["email"], job["url"], extra))
     with smtplib.SMTP(s["host"], int(s.get("port", 587)), timeout=20) as srv:
         if s.get("starttls", True):
             srv.starttls()
@@ -220,7 +230,7 @@ def submit(p):
         cand["years"] = 0
     cand["skills"] = [_s(x, 40) for x in (prof.get("skills") or [])[:30] if isinstance(x, str)]
     cand["ext"] = _ext(prof.get("ext"))
-    note = p["note"].strip()
+    note = (p.get("note") or "").strip()
 
     # Never email an address the browser sends: only the recruiter address this server found in the job feed itself.
     claimed = job["contact"] if EMAIL_RE.match(job["contact"] or "") else ""
@@ -315,7 +325,7 @@ def outbox_html():
             '<pre>%s</pre></article>' % (
                 e(badge), e(j["role"]), e(j["co"]), (" &lt;%s&gt;" % e(a["to"])) if a["to"] else "",
                 time.strftime("%b %d, %H:%M", time.localtime(a["at"])),
-                e(c["name"]), e(c["email"]), e(c["title"] or "candidate"), c["years"], a["match"], e(j["url"]), e(a["note"] + _detail_text(c, a["note"]))))
+                e(c["name"]), e(c["email"]), e(c["title"] or "candidate"), c["years"], a["match"], e(j["url"]), e(_application_text(c, j, a["note"]))))
     body = "".join(rows) or "<p class='m'>No applications yet. Swipe right on a job in the sandbox or dev app.</p>"
     return ("""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Aply test inbox</title><style>

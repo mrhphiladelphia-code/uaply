@@ -34,7 +34,7 @@ function patch(s){
   s=once(s,'s:salOk?1:(sa>=0.9?0.5:0),ask:money(job.sal[0])+" to "+money(job.sal[1])','s:unk?0.5:salOk?1:(sa>=0.9?0.5:0),ask:unk?"Not listed":money(job.sal[0])+" to "+money(job.sal[1])');
   s=once(s,"<p class=\"blurb\">'+esc(j.blurb)+'</p>","<p class=\"blurb\">'+esc(j.blurb)+'</p>'+(j.url?'<button type=\"button\" class=\"linkbtn\" data-open=\"'+esc(j.url)+'\">View posting on '+esc(j.source||'the company site')+' ↗</button>':'')+'");
   s=once(s,'toast(dir==="applied"?"Applied to "+job.co+" · "+m.pct+"% match":"Passed on "+job.co,"Undo",undo);',
-    'if(dir==="applied"&&job.url&&!window.__aplyOnApplied){toast("Saved "+job.co+" · "+m.pct+"% match. Finish on their site.","Open",function(){window.__aplyOpen(job.url)})}else{toast(dir==="applied"?"Saved "+job.co+" to Applied · "+m.pct+"% match":"Passed on "+job.co,"Undo",undo)}');
+    'if(dir==="applied"&&window.__aplyQuiet&&window.__aplySubmitOn){}else if(dir==="applied"&&job.url&&!window.__aplyOnApplied){toast("Saved "+job.co+" · "+m.pct+"% match. Finish on their site.","Open",function(){window.__aplyOpen(job.url)})}else{toast(dir==="applied"?"Saved "+job.co+" to Applied · "+m.pct+"% match":"Passed on "+job.co,"Undo",undo)}');
   return s;
 }
 
@@ -203,17 +203,72 @@ function kitApply(w,host){
     else if(submitOn&&!ask&&!profileOk)setStatus("Not sent yet: your profile needs a name and email.",true);
   }
 
-  w.__aplyOnApplied=sheet;   /* also tells the live patch not to show its own toast */
+  /* ---- quiet apply: a swipe right is the whole action, like pressing Submit application ---- */
+  var showSheet=!!((host&&host.defaultView&&host.defaultView.AplyOpts)||{}).showSheet;   /* opt back in to the full sheet */
+  function toast(msg,action,fn,ms){
+    var old=d.getElementById("kitToast");if(old)old.remove();
+    w.clearTimeout(w.__kitToastT);
+    var t=d.createElement("div");t.id="kitToast";t.className="toast";t.setAttribute("role","status");
+    var s=d.createElement("span");s.textContent=msg;t.appendChild(s);
+    if(action){var b=d.createElement("button");b.type="button";b.textContent=action;b.onclick=fn;t.appendChild(b)}
+    d.body.appendChild(t);
+    if(ms!==0)w.__kitToastT=w.setTimeout(function(){t.remove()},ms||6000);
+    return {el:t,set:function(x){s.textContent=x}};
+  }
+  function openProfile(){var b=d.getElementById("nb-prof");if(b){b.click();var it=d.querySelector('.nwrap[data-k=prof] .nitem[data-v=settings]');if(it)it.click()}}
+  function quietApply(job,m,p,undo,S,save){
+    var live=w.__aplyMode==="live",auto=w.__aplyAuto!==false;
+    var target=(live&&w.__aplyRedirect)||job.contact||"";
+    if(!(p.name&&EMAIL.test(p.email||"")&&(!live||p.custom))){
+      toast("Add your name and email in Profile so recruiters can reply.","Open Profile",openProfile,9000);return;
+    }
+    if(live&&!auto){sheet(job,m,p,undo,S,save);return}           /* auto_send is off in the config: show the review screen */
+    function deliver(){
+      /* the application is the profile itself: no cover note or message is written for the recruiter */
+      post("/api/apply",{consent:true,confirm_real:live,match:m.pct,note:"",
+        job:{id:job.id,co:job.co,role:job.role,url:job.url,source:job.source,loc:job.loc,contact:job.contact||""},
+        profile:{name:p.name,email:p.email,title:p.title,years:p.years,skills:p.skills,loc:p.loc,edu:p.edu,ext:p.ext||{}}
+      }).then(function(r){
+        var j=r.j||{};
+        if(!r.ok){toast(j.error||"Could not send your application.","Try again",deliver,9000);return}
+        var dec=S&&S.decisions&&S.decisions[job.id];
+        if(dec&&j.status!=="duplicate"){dec.sent={at:Date.now(),to:j.to||"",status:j.status};if(save)save()}
+        if(j.status==="delivered_test")toast("Application sent to "+job.co+" (test inbox)");
+        else if(j.status==="sent")toast("Application sent to "+job.co+". Replies go to "+p.email+".");
+        else if(j.status==="duplicate")toast("You already applied to "+job.co+".");
+        else if(j.status==="handoff")toast(job.co+" takes applications on its own site.","Apply there",function(){if(w.__aplyOpen)w.__aplyOpen(job.url)},12000);
+        else if(j.status==="failed")toast(j.error||"The email could not be sent.","Try again",deliver,9000);
+        else toast("Done.");
+      }).catch(function(){toast("Could not reach the server.","Try again",deliver,9000)});
+    }
+    var grace=Math.max(0,w.__aplyGrace||0);
+    if(!live||!target||grace===0){deliver();return}              /* test mode, or nothing to email: nothing to wait for */
+    var left=grace,cancelled=false,timer=null,t=null;            /* live: send by itself, with a short window for Undo */
+    function tick(){
+      if(cancelled)return;
+      if(left<=0){clearInterval(timer);deliver();return}
+      var msg="Applying to "+job.co+" in "+left+"…";
+      if(t)t.set(msg);else t=toast(msg,"Undo",function(){cancelled=true;clearInterval(timer);undo();toast("Cancelled. Nothing was sent.")},0);
+      left--;
+    }
+    timer=setInterval(tick,1000);tick();
+  }
+
+  w.__aplyOnApplied=sheet;   /* tells the live patch the apply assistant is on */
   w.__aplyOnDecision=function(dir,job,m,p,undo,S,save){
-    if(w.__aplySubmitOn&&w.__aplyMode){
+    var ready=!!(w.__aplySubmitOn&&w.__aplyMode);
+    if(ready){
       post("/api/decision",{session:session(),dir:dir==="applied"?"apply":"pass",jobId:job.id,co:job.co,role:job.role,pct:m.pct}).catch(function(){});
     }
-    if(dir==="applied"&&job.url)sheet(job,m,p,undo,S,save);
+    if(dir!=="applied"||!job.url)return;
+    if(ready&&!showSheet)quietApply(job,m,p,undo,S,save);
+    else sheet(job,m,p,undo,S,save);
   };
+  w.__aplyQuiet=!showSheet;
 }
 
 function submitApply(w){
-  w.__aplySubmitOn=true;
+  w.__aplySubmitOn=true;   /* from here on a swipe right applies by itself (see quietApply) */
   return w.fetch("/api/apply/config").then(function(r){return r.json()}).then(function(c){w.__aplyMode=c.mode==="live"?"live":"test";w.__aplyRedirect=c.redirect||"";w.__aplyAuto=c.autoSend!==false;w.__aplyGrace=typeof c.graceSeconds==="number"?c.graceSeconds:5}).catch(function(){});
 }
 

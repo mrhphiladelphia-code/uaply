@@ -44,11 +44,7 @@ var SPEC=[
   {k:"sponsor",label:"Will you now or in the future need visa sponsorship?",type:"select",full:1,hint:"Answer this the same way on every application.",opts:[["","Choose"],["no","No"],["yes","Yes"]]},
   {k:"start",label:"Earliest start",type:"select",opts:START}]},
  {sec:"preferences",title:"What you are looking for",items:[
-  {k:"types",label:"Opportunity types",type:"checks",full:1,opts:[["fulltime","Full-time"],["parttime","Part-time"],["internship","Internship"],["coop","Co-op"]]}]},
- {sec:"preferences",title:"Your application note",items:[
-  {k:"noteTpl",label:"Default note",type:"textarea",full:1,max:1200,
-   ph:"Hi {company} team, I'm interested in the {role} role. I'm a {title} with {years} years of experience in {skills}, based in {city}.",
-   hint:"Used for every application. Placeholders: {company} {role} {name} {title} {years} {skills} {city}."}]}
+  {k:"types",label:"Opportunity types",type:"checks",full:1,opts:[["fulltime","Full-time"],["parttime","Part-time"],["internship","Internship"],["coop","Co-op"]]}]}
 ];
 
 var CSS=".px-h{margin-top:6px}.px-h h3{margin:0}"+
