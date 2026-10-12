@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aply dev</title>
+<style>
+/* DEV: a fixed release candidate. Edit PROMOTED below to change what is in it. Own storage key. */
+:root{--bg:#FDF0F2;--surface:#FFFFFF;--ink:#2A1218;--muted:#7B5560;--line:#F3DADF}
+@media (prefers-color-scheme: dark){:root{--bg:#190B10;--surface:#26131A;--ink:#FBE9EE;--muted:#C79BA6;--line:#40222B}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font:13px/1.4 'DM Sans','Segoe UI',system-ui,sans-serif}
+.bar{display:flex;gap:10px;align-items:center;padding:6px 12px;background:var(--surface);border-bottom:1px solid var(--line);color:var(--muted)}
+.bar>span:last-child{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{flex:none;font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.08em;padding:3px 8px;border-radius:6px;background:#2F7BD9;color:#fff}
+iframe{flex:1;min-height:0;border:0;width:100%;background:var(--bg)}
+</style>
+</head>
+<body>
+<div class="bar"><span class="badge">DEV</span><span id="what">Release candidate</span></div>
+<iframe id="app" title="Aply dev build"></iframe>
+<script src="aply-nav.js"></script>
+<script src="aply-live.js"></script>
+<script src="aply-envs.js"></script>
+<script>
+window.AplyOpts={hideServiceCounts:true};   /* dev: just swipe, no "83 jobs" counters */
+var PROMOTED=["nav","live","kit","submit","axis","caps","smart","fit","a11y","anim"];
+var KEY="hireswipe.dev.v1",on={};
+PROMOTED.forEach(function(k){on[k]=true});
+document.getElementById("what").textContent="Release candidate: "+PROMOTED.map(function(k){return AplyEnv.FEATURES[k].name}).join(", ");
+AplyEnv.run(document.getElementById("app"),on,KEY,function(err){if(err)document.getElementById("what").textContent="Problem: "+err});
+</script>
+</body>
+</html>

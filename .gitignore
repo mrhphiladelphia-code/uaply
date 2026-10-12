@@ -1,0 +1,13 @@
+# secrets and local records: never commit these
+aply-config.json
+data/
+
+# generated
+__pycache__/
+*.pyc
+share/*.html
+!share/build-share.js
+
+# local settings
+.claude/settings.local.json
+node_modules/
