@@ -29,7 +29,18 @@ python serve.py 8767 dev --api
 To email real recruiters, copy `aply-config.example.json` to `aply-config.json` and add your own mail login. That file
 and the `data/` folder are ignored by git and must never be committed.
 
-## Making a change
+## Make a change from a link (no setup)
+
+Open one of these, sign in to GitHub, edit the files in the browser, and commit. If you are not a collaborator, GitHub
+copies the project to your account and sends your change to the owner as a pull request.
+
+- Edit the sandbox: https://github.dev/saifsiddiqueep-sketch/aply/tree/sandbox
+- Edit dev: https://github.dev/saifsiddiqueep-sketch/aply/tree/dev
+
+The browser editor cannot run the app or the checks. The pull request runs the checks for you, and the hosted page
+updates once the owner merges.
+
+## Making a change on your computer
 
 1. Branch from `sandbox` (for example `git checkout -b my-idea sandbox`), or fork the repository.
 2. Edit the files in `shared/` (experiments), `sandbox/` or `dev/` (the two pages), or the Python back end.
