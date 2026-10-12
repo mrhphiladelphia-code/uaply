@@ -1,6 +1,8 @@
 {
-  "_comment": "Copy to aply-config.json to change delivery. Without that file the sandbox and dev run in TEST mode: applications go to the simulated inbox at /outbox and nothing leaves this computer. test_recipient sends EVERY live application to that address instead of the recruiter, so you can test real email delivery safely. Remove it only when you are ready to email real recruiters. Never commit real credentials.",
+  "_comment": "Copy to aply-config.json to change delivery. Without that file the sandbox and dev run in TEST mode: a swipe right delivers the application to the simulated inbox at /outbox and nothing leaves this computer. In live mode a swipe right emails the recruiter by itself after grace_seconds (Undo cancels it); set auto_send to false to show a Send button instead. Only postings that list a recruiting email can be emailed; the rest hand off to the employer's own page. test_recipient sends EVERY live application to that address instead of the recruiter, so you can test real email safely. Never commit real credentials.",
   "delivery": "live",
+  "auto_send": true,
+  "grace_seconds": 5,
   "test_recipient": "your-test-inbox@example.com",
   "daily_limit": 20,
   "smtp": {

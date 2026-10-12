@@ -63,7 +63,12 @@ def _redirect(cfg):
 
 def public_config():
     cfg = config()
-    return {"mode": cfg["delivery"], "canEmail": _smtp_ready(cfg), "redirect": _redirect(cfg)}
+    try:
+        grace = max(0, min(30, int(cfg.get("grace_seconds", 5))))
+    except (TypeError, ValueError):
+        grace = 5
+    return {"mode": cfg["delivery"], "canEmail": _smtp_ready(cfg), "redirect": _redirect(cfg),
+            "autoSend": cfg.get("auto_send", True) is not False, "graceSeconds": grace}
 
 
 def _append(name, obj):

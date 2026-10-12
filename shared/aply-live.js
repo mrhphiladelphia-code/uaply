@@ -97,27 +97,37 @@ function kitApply(w,host){
   function sheet(job,m,p,undo,S,save){
     if(!job.url||d.getElementById("kitSheet"))return;
     var submitOn=!!w.__aplySubmitOn&&!!w.__aplyMode,mode=w.__aplyMode,live=mode==="live";
+    /* ask = show a review screen with a Send button first. Always in live mode; in test mode only where the page opts in (sandbox). */
+    var auto=live&&w.__aplyAuto!==false;     /* live + auto_send (the default): swipe right sends by itself after a short undo window */
+    var ask=(live&&!auto)||!!((host&&host.defaultView&&host.defaultView.AplyOpts)||{}).reviewBeforeSend;
+    var target=(live&&w.__aplyRedirect)||job.contact||"";
     var contact=job.contact||"",profileOk=!!(p.name&&EMAIL.test(p.email||"")&&(!live||p.custom));
     var o=d.createElement("div");o.id="kitSheet";
     o.style.cssText="position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:16px;background:rgba(0,0,0,.45);overflow:auto";
     var intro=!submitOn
       ?'Saved to your Applied list. Aply does not send applications for you: '+esc(job.co)+' only accepts them on its own page'+(contact?'':', and the posting does not list a recruiter email')+'. Here is a note and the quickest way to finish.'
+      :(live&&auto
+        ?(target
+          ?'<b>'+(w.__aplyRedirect?'Test redirect. ':'')+'Applying automatically.</b> Your application will be emailed to <b>'+esc(target)+'</b> in a few seconds. Press Undo to cancel. Replies go to your email.'
+          :'This posting lists no recruiter email, so Aply cannot email it. Use the application page below to apply on the employer\'s site.')
       :(live
         ?(w.__aplyRedirect
           ?'<b>Test redirect.</b> Pressing Send emails this application to <b>'+esc(w.__aplyRedirect)+'</b> instead of the recruiter. Replies go to your email.'
           :'Review your application. Pressing Send emails it to the recruiter'+(contact?' at <b>'+esc(contact)+'</b>':'')+', and replies go to your email.'+(contact?'':' This posting lists no recruiter email, so Aply cannot email it: use the application page instead.'))
-        :'<b>Test mode.</b> Your application was delivered to a simulated recruiter inbox on this computer. Nothing was sent to '+esc(job.co)+'.');
+        :(ask
+          ?'<b>Test mode.</b> Review the note, then press Send. It goes to a simulated recruiter inbox on this computer; nothing is sent to '+esc(job.co)+'.'
+          :'<b>Test mode.</b> Your application was delivered to a simulated recruiter inbox on this computer. Nothing was sent to '+esc(job.co)+'.')));
     o.innerHTML='<div role="dialog" aria-modal="true" aria-labelledby="kitH" style="background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:18px;padding:20px;max-width:460px;width:100%;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px">'+
-      '<h2 id="kitH" style="margin:0;font:800 20px var(--display)">'+(submitOn&&!live?'Sending to ':'Finish applying to ')+esc(job.co)+'</h2>'+
+      '<h2 id="kitH" style="margin:0;font:800 20px var(--display)">'+(submitOn&&!ask?'Sending to ':'Finish applying to ')+esc(job.co)+'</h2>'+
       '<p style="margin:0;color:var(--muted);font-size:14px">'+intro+'</p>'+
       (!p.custom?'<p style="margin:0;color:var(--mid);font-size:13px">This uses the example profile. Add your own details in Profile first.</p>':'')+
       (submitOn&&!profileOk?'<p style="margin:0;color:var(--no);font-size:13px">Add your name and a valid email in Profile, Settings so the recruiter can reply.</p>':'')+
       '<textarea id="kitText" rows="7" aria-label="Application note" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font:inherit;resize:vertical"></textarea>'+
       '<p id="kitStatus" role="status" style="margin:0;font-size:13.5px;font-weight:600;min-height:1.3em"></p>'+
       '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
-        (submitOn&&live?'<button type="button" class="btn" id="kitSend"'+((!profileOk||!(contact||w.__aplyRedirect))?' disabled':'')+'>Send application</button>':'')+
+        (submitOn&&ask?'<button type="button" class="btn" id="kitSend"'+((!profileOk||(live&&!(contact||w.__aplyRedirect)))?' disabled':'')+'>Send application</button>':'')+
         (submitOn&&!profileOk?'<button type="button" class="btn" id="kitProfile">Open Profile</button>':'')+
-        '<button type="button" class="btn'+(submitOn&&live&&contact?' ghost':'')+'" id="kitOpen">Open application page ↗</button>'+
+        '<button type="button" class="btn'+(submitOn&&ask?' ghost':'')+'" id="kitOpen">Open application page ↗</button>'+
         '<button type="button" class="btn ghost" id="kitCopy">Copy note</button>'+
         '<button type="button" class="btn ghost" id="kitMail">Email draft</button>'+
         (submitOn&&!live?'<a class="linkbtn" href="/outbox" target="_blank" rel="noopener noreferrer" style="align-self:center">View test inbox ↗</a>':'')+
@@ -126,6 +136,7 @@ function kitApply(w,host){
     d.body.appendChild(o);
     var ta=d.getElementById("kitText"),statusEl=d.getElementById("kitStatus"),undoBtn=d.getElementById("kitUndo");
     ta.value=note(job,m,p);
+    var cancelled=false;
     function close(){o.remove()}
     function setStatus(t,bad){statusEl.textContent=t;statusEl.style.color=bad?"var(--no)":"var(--yes)"}
     function send(){
@@ -146,7 +157,7 @@ function kitApply(w,host){
         else if(j.status==="failed"){setStatus(j.error||"The email could not be sent.",true);if(sendBtn)sendBtn.disabled=false;return}
         else setStatus("Done.");
         if(j.status!=="handoff")undoBtn.hidden=true;
-        if(sendBtn&&(j.status==="sent"||j.status==="duplicate"))sendBtn.hidden=true;
+        if(sendBtn&&(j.status==="sent"||j.status==="delivered_test"||j.status==="duplicate"))sendBtn.hidden=true;
       }).catch(function(){setStatus("Could not reach the server.",true);if(sendBtn)sendBtn.disabled=false});
     }
     var sendBtn=d.getElementById("kitSend");if(sendBtn)sendBtn.onclick=send;
@@ -159,11 +170,22 @@ function kitApply(w,host){
       d.body.appendChild(a);a.click();a.remove();
     };
     d.getElementById("kitDone").onclick=close;
-    undoBtn.onclick=function(){close();undo()};
+    undoBtn.onclick=function(){cancelled=true;close();undo()};
     o.addEventListener("keydown",function(e){if(e.key==="Escape")close()});
     (d.getElementById("kitSend")&&!d.getElementById("kitSend").disabled?d.getElementById("kitSend"):d.getElementById("kitOpen")).focus();
-    if(submitOn&&!live&&profileOk)send();   /* test mode: swipe right delivers immediately */
-    else if(submitOn&&!live&&!profileOk)setStatus("Not sent yet: your profile needs a name and email.",true);
+    if(submitOn&&!ask&&profileOk){
+      if(!live||!target)send();          /* test mode, or nothing to email: record it now */
+      else{                              /* live: send by itself after a short window in which Undo cancels it */
+        var left=Math.max(0,w.__aplyGrace||0),timer=null;
+        var tick=function(){
+          if(cancelled){clearInterval(timer);return}
+          if(left<=0){clearInterval(timer);send();return}
+          setStatus("Sending to "+target+" in "+left+" second"+(left===1?"":"s")+". Press Undo to cancel.");left--;
+        };
+        timer=setInterval(tick,1000);tick();
+      }
+    }
+    else if(submitOn&&!ask&&!profileOk)setStatus("Not sent yet: your profile needs a name and email.",true);
   }
 
   w.__aplyOnApplied=sheet;   /* also tells the live patch not to show its own toast */
@@ -177,7 +199,7 @@ function kitApply(w,host){
 
 function submitApply(w){
   w.__aplySubmitOn=true;
-  return w.fetch("/api/apply/config").then(function(r){return r.json()}).then(function(c){w.__aplyMode=c.mode==="live"?"live":"test";w.__aplyRedirect=c.redirect||""}).catch(function(){});
+  return w.fetch("/api/apply/config").then(function(r){return r.json()}).then(function(c){w.__aplyMode=c.mode==="live"?"live":"test";w.__aplyRedirect=c.redirect||"";w.__aplyAuto=c.autoSend!==false;w.__aplyGrace=typeof c.graceSeconds==="number"?c.graceSeconds:5}).catch(function(){});
 }
 
 window.AplyLive={patch:patch,apply:apply,kit:{patch:kitPatch,apply:kitApply},submit:{apply:submitApply}};
