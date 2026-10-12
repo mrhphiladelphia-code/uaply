@@ -25,7 +25,7 @@ iframe{flex:1;min-height:0;border:0;width:100%;background:var(--bg)}
 <script src="aply-envs.js"></script>
 <script>
 window.AplyOpts={hideServiceCounts:true};   /* dev: just swipe, no "83 jobs" counters */
-var PROMOTED=["nav","live","kit","submit","axis","caps","smart","fit","a11y","anim"];
+var PROMOTED=["nav","live","kit","submit","axis","caps","smart","fit","tap","dates","hint","a11y","anim"];   /* "guide" is left out on purpose: it shows "N jobs left" counters */
 var KEY="hireswipe.dev.v1",on={};
 PROMOTED.forEach(function(k){on[k]=true});
 document.getElementById("what").textContent="Release candidate: "+PROMOTED.map(function(k){return AplyEnv.FEATURES[k].name}).join(", ");
