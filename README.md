@@ -29,7 +29,18 @@ python serve.py 8767 dev --api
 To email real recruiters, copy `aply-config.example.json` to `aply-config.json` and add your own mail login. That file
 and the `data/` folder are ignored by git and must never be committed.
 
-## Making a change
+## Make a change from a link (no setup)
+
+Open one of these, sign in to GitHub, edit the files in the browser, and commit. If you are not a collaborator, GitHub
+copies the project to your account and sends your change to the owner as a pull request.
+
+- Edit the sandbox: https://github.dev/saifsiddiqueep-sketch/aply/tree/sandbox
+- Edit dev: https://github.dev/saifsiddiqueep-sketch/aply/tree/dev
+
+The browser editor cannot run the app or the checks. The pull request runs the checks for you, and the hosted page
+updates once the owner merges.
+
+## Making a change on your computer
 
 1. Branch from `sandbox` (for example `git checkout -b my-idea sandbox`), or fork the repository.
 2. Edit the files in `shared/` (experiments), `sandbox/` or `dev/` (the two pages), or the Python back end.
@@ -52,7 +63,9 @@ Real jobs and application sending need `serve.py --api` running somewhere.
    git remote add origin https://github.com/YOUR-NAME/aply.git
    git push -u origin main dev sandbox
    ```
-2. Settings, Pages: set the source to **GitHub Actions**.
+2. Settings, Pages: set the source to **GitHub Actions**. Then Settings, Environments, `github-pages`: under
+   deployment branches allow `main`, `dev` and `sandbox` (by default only `main` may deploy, so a push to dev or
+   sandbox would fail before it starts).
 3. Settings, Branches: protect `main`, `dev` and `sandbox` (require a pull request and a passing "Check the code").
 4. Who can change things:
    - **Anyone with the link, by proposal:** make the repository public. Anyone can fork it and open a pull request,
