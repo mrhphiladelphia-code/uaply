@@ -112,6 +112,7 @@ var FEATURES={
  live:{name:"Real jobs",note:"Loads real, current postings from employers' public job boards (Greenhouse, Lever, Ashby) and Remotive through this server's back end, hides the made-up examples, and links each card to the original posting. Indeed and ZipRecruiter have no open API, so they are not included.",patch:function(s){return window.AplyLive.patch(s)},apply:function(w,host){return window.AplyLive.apply(w,host)}},
  kit:{name:"Apply assistant",note:"After a swipe right on a real posting: a ready-to-send note, Copy, an email draft (opens your mail app; you press send) and a button to the employer's application page. Aply cannot submit applications itself.",patch:function(s){return window.AplyLive.kit.patch(s)},apply:function(w,host){window.AplyLive.kit.apply(w,host)}},
  submit:{name:"Send applications",note:"Swipe right sends the application through this server: in test mode to a simulated recruiter inbox (nothing leaves this computer, see /outbox), in live mode by email to the recruiter after you review and press Send. Swipe left only records a pass; nothing is sent. Needs Bottom navigation, Real jobs and Apply assistant, which turn on with it.",apply:function(w,host){return window.AplyLive.submit.apply(w,host)}},
+ profile:{name:"Application profile",note:"Profile gets what LinkedIn, Indeed, ZipRecruiter and Handshake collect for a fast, complete application: phone, resume link, LinkedIn and portfolio, school and major, work authorization and sponsorship, start date, opportunity types and a default note. Shows a readiness score and checks your links. Needs Bottom navigation.",patch:function(s){return window.AplyProfile.patch(s)},apply:function(w,host){window.AplyProfile.apply(w,host)}},
  anim:{name:"Card rise motion",note:"The next card eases up into place after each swipe (skipped when reduced motion is on).",patch:function(s){return once(s,"</style>",CSS_RISE+"</style>")}},
  a11y:{name:"Screen reader announce",note:"A hidden live region announces the new top job after each swipe.",apply:function(w){
    var d=w.document,lr=d.createElement("div");
@@ -143,7 +144,7 @@ var FEATURES={
    };
  }}
 };
-var ORDER=["easy","confirm","axis","caps","smart","top2","nav","live","kit","submit","fit","guide","tap","dates","hint","anim","a11y","backend"];
+var ORDER=["easy","confirm","axis","caps","smart","top2","nav","profile","live","kit","submit","fit","guide","tap","dates","hint","anim","a11y","backend"];
 
 function build(on,key){
   return fetch("prod-index.html",{cache:"no-store"}).then(function(r){return r.text()}).then(function(src){
@@ -157,6 +158,7 @@ function build(on,key){
 /* Load the patched copy into frame. `on` = {featureKey:true}. `key` = this instance's own localStorage key. */
 function run(frame,on,key,done){
   if(on.submit)on=Object.assign({},on,{nav:true,live:true,kit:true});   /* sending applications needs these three */
+  if(on.profile)on=Object.assign({},on,{nav:true});                     /* the profile fields live in the navigation's Profile sections */
   return build(on,key).then(function(b){
     frame.onload=function(){
       var w=frame.contentWindow;w.__aplyKey=key;

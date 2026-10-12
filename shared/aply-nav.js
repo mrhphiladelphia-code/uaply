@@ -240,6 +240,7 @@ function apply(w,host){
   function section(v){
     secTitle.textContent=label("prof",v);lead.textContent=LEADS[v];
     Object.keys(FIELDS).forEach(function(key){FIELDS[key].forEach(function(id){d.getElementById(id).closest(".field").hidden=(key!==v)})});
+    d.querySelectorAll("[data-sec]").forEach(function(x){x.hidden=(" "+x.getAttribute("data-sec")+" ").indexOf(" "+v+" ")<0});   /* fields other experiments add */
     fs.hidden=v!=="filters";
     d.getElementById("saveBtn").hidden=v==="filters";
     d.getElementById("resetBtn").hidden=v!=="filters";
@@ -251,7 +252,12 @@ function apply(w,host){
     going=true;
     if(k==="svc"){A.setType(sub.svc);A.show("swipe");savePrefs()}
     else if(k==="dash"){A.show("apps");d.getElementById("pane-apps").hidden=true;renderTrack();tp.hidden=false}
-    else{A.show("profile");section(sub.prof)}
+    else{
+      /* Settings, Preferences and Filters are one form. Moving between them must not reload the saved copy,
+         or whatever was typed and not yet saved would be thrown away. */
+      if(d.getElementById("pane-profile").hidden)A.show("profile");
+      section(sub.prof);
+    }
     going=false;refresh();main.scrollTop=0;
   }
   w.__aplyOnShow=function(t){

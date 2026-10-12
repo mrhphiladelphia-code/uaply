@@ -6,6 +6,7 @@ const fs = require("fs");
 const read = (p) => fs.readFileSync(p, "utf8");
 const prod = read("prod/index.html");
 const nav = read("shared/aply-nav.js");
+const profile = read("shared/aply-profile.js");
 let envs = read("shared/aply-envs.js");
 
 const NEEDS_SERVER = ["live", "kit", "submit"];
@@ -18,7 +19,7 @@ if (envs.includes('fetch("prod-index.html"')) throw new Error("envs patch failed
 
 const safe = (s) => s.replace(/<\/script/gi, "<\\/script");
 const inline = "<script>window.__PROD_SRC=" + JSON.stringify(prod).replace(/</g, "\\u003c") + ";</script>\n" +
-  "<script>" + safe(nav) + "</script>\n<script>" + safe(envs) + "</script>";
+  "<script>" + safe(nav) + "</script>\n<script>" + safe(profile) + "</script>\n<script>" + safe(envs) + "</script>";
 
 function darkBlocks(html) {
   // add the guarded dark block and the explicit data-theme block so the host theme toggle works
@@ -28,7 +29,7 @@ function darkBlocks(html) {
 
 function build(src, out, title, edits) {
   let h = read(src);
-  h = h.replace(/<script src="aply-nav\.js"><\/script>\s*<script src="aply-live\.js"><\/script>\s*<script src="aply-envs\.js"><\/script>/, inline);
+  h = h.replace(/(<script src="aply-[a-z]+\.js"><\/script>\s*)+/, inline + "\n");
   if (!h.includes("__PROD_SRC")) throw new Error("script tags not found in " + src);
   h = h.replace(/<title>[^<]*<\/title>/, "<title>" + title + "</title>");
   edits.forEach(([a, b]) => { if (!h.includes(a)) throw new Error("edit target missing: " + a.slice(0, 40)); h = h.replace(a, b); });
@@ -46,7 +47,7 @@ function build(src, out, title, edits) {
 }
 
 build("sandbox/index.html", "share/sandbox.html", "Aply Sandbox", [
-  ["on={nav:true,live:true,kit:true,submit:true,", "on={nav:true,"],
+  ["on={nav:true,profile:true,live:true,kit:true,submit:true,", "on={nav:true,profile:true,"],
   ["Experiment freely. Reads a copy of index.html (prod); prod is never changed.", "Experiment freely. Hosted copy: example jobs only, and your swipes stay in your own browser."],
 ]);
 build("dev/index.html", "share/dev.html", "Aply Dev", [

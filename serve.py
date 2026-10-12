@@ -23,7 +23,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 if api:
     # the sandbox and dev pages load these shared files and a copy of the production page; no command-line aliases needed
     for url, rel in (("/aply-envs.js", "shared/aply-envs.js"), ("/aply-nav.js", "shared/aply-nav.js"),
-                     ("/aply-live.js", "shared/aply-live.js"), ("/prod-index.html", "prod/index.html")):
+                     ("/aply-live.js", "shared/aply-live.js"), ("/aply-profile.js", "shared/aply-profile.js"),
+                     ("/prod-index.html", "prod/index.html")):
         alias.setdefault(url, os.path.join(HERE, rel))
     import jobs_api, apply_api
     apply_api.init(os.path.basename(root))

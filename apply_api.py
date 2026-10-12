@@ -106,6 +106,56 @@ def _s(v, n):
     return re.sub(r"[\r\n\t]+", " ", v).strip()[:n] if isinstance(v, str) else ""
 
 
+_AUTH = {"citizen": "US citizen or permanent resident", "authorized": "Authorized to work (visa, OPT or similar)",
+         "none": "Not currently authorized"}
+_START = {"now": "Right away", "2w": "Within 2 weeks", "1m": "Within a month", "grad": "After graduation", "flex": "Flexible"}
+_TYPES = {"fulltime": "Full-time", "parttime": "Part-time", "internship": "Internship", "coop": "Co-op"}
+
+
+def _pick(v, allowed):
+    return v if isinstance(v, str) and v in allowed else ""
+
+
+def _https(v, n=300):
+    v = _s(v, n)
+    return v if v.lower().startswith("https://") and " " not in v else ""
+
+
+def _ext(raw):
+    """The optional application-profile details (phone, links, education, authorization...), each checked and capped."""
+    x = raw if isinstance(raw, dict) else {}
+    phone = _s(x.get("phone"), 25)
+    phone = phone if re.match(r"^[+()\d\s.-]{7,25}$", phone) else ""
+    grad = _s(x.get("grad"), 7)
+    grad = grad if re.match(r"^\d{4}-(0[1-9]|1[0-2])$", grad) else ""
+    try:
+        gpa = float(x.get("gpa"))
+        gpa = round(gpa, 2) if 0 <= gpa <= 4.5 else ""
+    except (TypeError, ValueError):
+        gpa = ""
+    types = [t for t in x.get("types") if t in _TYPES] if isinstance(x.get("types"), list) else []
+    return {"phone": phone, "headline": _s(x.get("headline"), 120), "summary": _s(x.get("summary"), 600),
+            "resume": _https(x.get("resume")), "linkedin": _https(x.get("linkedin")), "portfolio": _https(x.get("portfolio")),
+            "school": _s(x.get("school"), 100), "major": _s(x.get("major"), 100), "grad": grad, "gpa": gpa,
+            "employer": _s(x.get("employer"), 100), "auth": _pick(x.get("auth"), _AUTH),
+            "sponsor": _pick(x.get("sponsor"), ("yes", "no")), "start": _pick(x.get("start"), _START), "types": types}
+
+
+def _detail_text(c, note=""):
+    """Candidate details as plain lines for the email body and the test inbox (empty if none were given).
+    A line whose value already appears in the note is left out, so nothing is said twice."""
+    x = c.get("ext") or {}
+    edu = ", ".join(v for v in (x.get("school"), x.get("major"), x.get("grad"), ("GPA %s" % x["gpa"]) if x.get("gpa") != "" and x.get("gpa") is not None else "") if v)
+    rows = [("Phone", x.get("phone")), ("Headline", x.get("headline")), ("Resume", x.get("resume")),
+            ("LinkedIn", x.get("linkedin")), ("Portfolio", x.get("portfolio")), ("Education", edu),
+            ("Most recent employer", x.get("employer")),
+            ("Work authorization", _AUTH.get(x.get("auth"), "") + ("; needs sponsorship" if x.get("sponsor") == "yes" else "; no sponsorship needed" if x.get("sponsor") == "no" else "") if x.get("auth") else ""),
+            ("Earliest start", _START.get(x.get("start"), "")),
+            ("Looking for", ", ".join(_TYPES[t] for t in x.get("types", [])))]
+    lines = ["%s: %s" % (k, v) for k, v in rows if v and str(v) not in note]
+    return ("\n\nCandidate details\n" + "\n".join(lines)) if lines else ""
+
+
 def _validate(p):
     if p.get("consent") is not True:
         return "Consent is required to send an application."
@@ -143,7 +193,7 @@ def _send_email(cfg, to, cand, job, note, original=""):
     test = _redirect(cfg) == to
     msg["Subject"] = "%sApplication: %s - %s" % ("[TEST] " if test else "", job["role"], cand["name"])
     extra = ("\nTest redirect: this would have gone to %s.\n" % (original or "the company's application page")) if test else ""
-    msg.set_content("%s\n\n--\nSent through Aply on behalf of %s <%s>.\nPosting: %s\n%s" % (note, cand["name"], cand["email"], job["url"], extra))
+    msg.set_content("%s%s\n\n--\nSent through Aply on behalf of %s <%s>.\nPosting: %s\n%s" % (note, _detail_text(cand, note), cand["name"], cand["email"], job["url"], extra))
     with smtplib.SMTP(s["host"], int(s.get("port", 587)), timeout=20) as srv:
         if s.get("starttls", True):
             srv.starttls()
@@ -169,6 +219,7 @@ def submit(p):
     except (TypeError, ValueError):
         cand["years"] = 0
     cand["skills"] = [_s(x, 40) for x in (prof.get("skills") or [])[:30] if isinstance(x, str)]
+    cand["ext"] = _ext(prof.get("ext"))
     note = p["note"].strip()
 
     # Never email an address the browser sends: only the recruiter address this server found in the job feed itself.
@@ -264,7 +315,7 @@ def outbox_html():
             '<pre>%s</pre></article>' % (
                 e(badge), e(j["role"]), e(j["co"]), (" &lt;%s&gt;" % e(a["to"])) if a["to"] else "",
                 time.strftime("%b %d, %H:%M", time.localtime(a["at"])),
-                e(c["name"]), e(c["email"]), e(c["title"] or "candidate"), c["years"], a["match"], e(j["url"]), e(a["note"])))
+                e(c["name"]), e(c["email"]), e(c["title"] or "candidate"), c["years"], a["match"], e(j["url"]), e(a["note"] + _detail_text(c, a["note"]))))
     body = "".join(rows) or "<p class='m'>No applications yet. Swipe right on a job in the sandbox or dev app.</p>"
     return ("""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Aply test inbox</title><style>

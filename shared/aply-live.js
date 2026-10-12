@@ -82,11 +82,26 @@ function kitApply(w,host){
   function post(path,body){
     return w.fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j}})});
   }
+  /* contact lines under the note, from the Application profile experiment (empty if it is off) */
+  function signature(p){
+    var x=p.ext||{},rows=[];
+    if(x.phone)rows.push("Phone: "+x.phone);
+    if(p.email)rows.push("Email: "+p.email);
+    if(x.linkedin)rows.push("LinkedIn: "+x.linkedin);
+    if(x.portfolio)rows.push("Portfolio: "+x.portfolio);
+    if(x.resume)rows.push("Resume: "+x.resume);
+    return rows.length?"\n\n"+rows.join("\n"):"";
+  }
   function note(job,m,p){
     var skills=(m.matched||[]).slice(0,5).join(", "),name=p.name||"[Your name]";
+    var tpl=p.ext&&typeof p.ext.noteTpl==="string"?p.ext.noteTpl.trim():"";
+    if(tpl){
+      var vals={company:job.co,role:job.role,name:name,title:p.title||"candidate",years:p.years||0,skills:skills||(p.skills||[]).slice(0,5).join(", "),city:p.loc||""};
+      return tpl.replace(/\{(company|role|name|title|years|skills|city)\}/g,function(_,k){return vals[k]})+"\n\n"+name+signature(p);
+    }
     var intro="I'm "+(p.title?"a "+p.title:"a candidate")+(p.years?" with "+p.years+" years of experience":"")+(skills?", and my background includes "+skills:"")+".";
     var where=p.loc?" I'm based in "+p.loc+".":"";
-    return "Hi "+job.co+" team,\n\nI'm interested in the "+job.role+" role"+(job.loc?" ("+job.loc+")":"")+". "+intro+where+" I'd welcome the chance to talk.\n\nThank you for your time,\n"+name;
+    return "Hi "+job.co+" team,\n\nI'm interested in the "+job.role+" role"+(job.loc?" ("+job.loc+")":"")+". "+intro+where+" I'd welcome the chance to talk.\n\nThank you for your time,\n"+name+signature(p);
   }
   function copy(text,btn){
     function done(){btn.textContent="Copied";setTimeout(function(){btn.textContent="Copy note"},1500)}
@@ -144,7 +159,7 @@ function kitApply(w,host){
       setStatus("Sending…");
       post("/api/apply",{consent:true,confirm_real:live,match:m.pct,note:ta.value,
         job:{id:job.id,co:job.co,role:job.role,url:job.url,source:job.source,loc:job.loc,contact:contact},
-        profile:{name:p.name,email:p.email,title:p.title,years:p.years,skills:p.skills,loc:p.loc,edu:p.edu}
+        profile:{name:p.name,email:p.email,title:p.title,years:p.years,skills:p.skills,loc:p.loc,edu:p.edu,ext:p.ext||{}}
       }).then(function(r){
         var j=r.j||{};
         if(!r.ok){setStatus(j.error||"Could not send.",true);if(sendBtn&&live)sendBtn.disabled=false;return}

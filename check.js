@@ -39,9 +39,9 @@ console.log("JSON files");
 console.log("Every experiment still applies to the production page");
 try {
   global.window = {}; global.localStorage = { getItem() { return null; } };
-  ["shared/aply-nav.js", "shared/aply-live.js"].forEach((f) => new Function("window", "localStorage", fs.readFileSync(f, "utf8"))(window, localStorage));
+  ["shared/aply-nav.js", "shared/aply-live.js", "shared/aply-profile.js"].forEach((f) => new Function("window", "localStorage", fs.readFileSync(f, "utf8"))(window, localStorage));
   let src = fs.readFileSync("prod/index.html", "utf8");
-  src = window.AplyNav.patch(src); src = window.AplyLive.patch(src); src = window.AplyLive.kit.patch(src);
+  src = window.AplyNav.patch(src); src = window.AplyProfile.patch(src); src = window.AplyLive.patch(src); src = window.AplyLive.kit.patch(src);
   new Function(/<script(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/.exec(src)[1]);
   ok("patched app assembles and parses");
 } catch (e) { bad("patching the production page failed: " + e.message); }
