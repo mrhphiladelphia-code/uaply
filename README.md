@@ -52,7 +52,9 @@ Real jobs and application sending need `serve.py --api` running somewhere.
    git remote add origin https://github.com/YOUR-NAME/aply.git
    git push -u origin main dev sandbox
    ```
-2. Settings, Pages: set the source to **GitHub Actions**.
+2. Settings, Pages: set the source to **GitHub Actions**. Then Settings, Environments, `github-pages`: under
+   deployment branches allow `main`, `dev` and `sandbox` (by default only `main` may deploy, so a push to dev or
+   sandbox would fail before it starts).
 3. Settings, Branches: protect `main`, `dev` and `sandbox` (require a pull request and a passing "Check the code").
 4. Who can change things:
    - **Anyone with the link, by proposal:** make the repository public. Anyone can fork it and open a pull request,
