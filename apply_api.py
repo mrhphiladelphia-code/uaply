@@ -235,6 +235,7 @@ def submit(p):
     # Never email an address the browser sends: only the recruiter address this server found in the job feed itself.
     claimed = job["contact"] if EMAIL_RE.match(job["contact"] or "") else ""
     contact = claimed if claimed and claimed.lower() == jobs_api.known_contact(job["id"]).lower() else ""
+    policy = jobs_api.job_policy(job["id"])      # 'direct' (employer opted in), 'link' (employer's own page) or 'unknown' (example)
     send_args = None
     with _lock:
         for a in APPS:
@@ -242,7 +243,13 @@ def submit(p):
                 return 200, {"status": "duplicate", "id": a["id"], "to": a.get("to", ""), "mode": a["mode"]}
         rec = {"id": uuid.uuid4().hex[:12], "at": int(time.time()), "mode": mode, "job": job, "candidate": cand,
                "note": note, "match": int(p.get("match") or 0), "to": "", "simulated": False, "status": ""}
-        if mode == "test":
+        if policy == "link" or (policy == "unknown" and mode == "live"):
+            # a third-party listing, or an example in live mode: Aply never sends an application to anyone here.
+            # The person is pointed to the employer's own application page instead.
+            rec["status"] = "handoff"
+            APPS.append(rec)
+            _append("applications.jsonl", rec)
+        elif mode == "test":
             rec["to"] = contact or _simulated_recipient(job["co"])
             rec["simulated"] = True
             rec["status"] = "delivered_test"

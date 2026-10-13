@@ -41,6 +41,7 @@ jobs:
           mkdir -p site/sandbox site/dev
           cp sb/share/sandbox.full.html site/sandbox/index.html
           cp dv/share/dev.full.html site/dev/index.html
+          cp -r sb/legal site/legal
           cat > site/index.html <<'HTML'
           <!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
           <title>Aply</title>

@@ -1,0 +1,24 @@
+{
+  "_comment": "Partner employers: companies that gave Aply their openings AND agreed to receive applications by email. Copy this file to aply-partners.json (git-ignored) and put real employers there. An employer with no recorded consent is ignored. An employer with no contact address is link-out only. Never add a company that has not agreed. The entries below are placeholders.",
+  "employers": [
+    {
+      "name": "Example Partner Co",
+      "consent": "Placeholder only: replace with how and when this employer agreed, for example 'signed partner agreement 2026-10-12'",
+      "contact": "",
+      "url": "https://example.com/careers",
+      "jobs": [
+        {
+          "role": "Example Software Intern",
+          "loc": "Remote (US)",
+          "mode": "remote",
+          "type": "internship",
+          "sal": [0, 0],
+          "yrs": 0,
+          "edu": "High school",
+          "skills": ["JavaScript", "HTML", "CSS"],
+          "blurb": "A placeholder listing that shows the format. It is not a real opening."
+        }
+      ]
+    }
+  ]
+}

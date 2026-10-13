@@ -39,6 +39,8 @@ class H(http.server.SimpleHTTPRequestHandler):
 
     def translate_path(self, path):
         p = path.split("?", 1)[0].split("#", 1)[0]
+        if api and p.startswith("/legal/") and ".." not in p:           # Terms, Privacy, AI disclosure, Copyright
+            return os.path.join(HERE, "legal", p[len("/legal/"):] or "index.html")
         return alias.get(p) or super().translate_path(path)
 
     def _send(self, code, body, ctype="application/json"):

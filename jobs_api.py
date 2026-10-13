@@ -9,11 +9,24 @@ How real job apps get postings, and what this does:
   * Remotive publishes a free remote-jobs feed on the condition that listings link back to Remotive and name it as
     the source, and that it is polled at most ~4 times a day. Both are respected below.
 
+LEGAL STATUS OF EACH SOURCE (checked October 2026; this is not legal advice, have a lawyer confirm before launch):
+  * Partner employers (aply-partners.json): AUTHORIZED. The employer gave us the posting and agreed to receive
+    applications. This is the only source whose applications Aply sends to a person.
+  * Remotive: its terms call using listings "to collect signups or email addresses" a breach, and Aply collects
+    emails. Never enabled by default; do not enable without written permission.
+  * Jobicy: must credit Jobicy and send applicants to the original job URL, so it is LINK-OUT ONLY.
+  * The Muse: terms not found. Unverified; do not enable until verified in writing.
+  * Greenhouse, Lever, Ashby public boards: meant for employers' careers pages; no terms found that cover third-party
+    aggregation. Unverified, LINK-OUT ONLY.
+  Third-party feeds are OFF unless the owner lists them under "feeds" in aply-config.json. Jobs from a feed are never
+  emailed to anyone (the recruiter address is dropped); swiping right only opens the employer's own page.
+
 get_jobs() returns {"fetched_at", "sources", "jobs"} where each job already matches the shape the app expects.
 """
 import hashlib
 import html
 import json
+import os
 import re
 import threading
 import time
@@ -21,6 +34,7 @@ import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
+ROOT = os.path.dirname(os.path.abspath(__file__))
 UA = "AplyDev/0.1 (local prototype)"
 DEFAULT_TTL = 30 * 60
 TTL = {"remotive": 6 * 3600,          # Remotive allows roughly 4 requests a day
@@ -194,16 +208,20 @@ def _normalize(raw, kind, name):
     blurb = text[:170].rsplit(" ", 1)[0] + "…" if len(text) > 170 else text
     jid = 100000 + int(hashlib.sha1(("%s:%s" % (kind, raw["id"])).encode()).hexdigest()[:6], 16)
     src = name if kind in ("remotive", "jobicy", "muse") else "%s's careers page" % raw["company"]
+    # contact is deliberately empty and apply is "link": a third-party feed never gets an application emailed to anyone
     return dict(id=jid, co=raw["company"], role=title, loc=loc or "Not listed", mode=mode,
                 sal=raw.get("sal") or _salary(raw["salary_text"], text), yrs=yrs, edu=edu, skills=skills, blurb=blurb,
-                type=typ, url=raw["url"], source=src, contact=_contact(text), live=True)
+                type=typ, url=raw["url"], source=src, contact="", apply="link", live=True)
 
 
 _refreshing = set()
 
 
 def known_contact(job_id):
-    """The recruiter address this server itself found for a job ('' if none or unknown)."""
+    """The recruiter address this server itself holds for a job ('' if none or unknown). Only partner employers have one."""
+    for j in partner_jobs():
+        if j["id"] == job_id:
+            return j.get("contact", "") or ""
     with _lock:
         for c in _cache.values():
             for j in c["jobs"]:
@@ -259,16 +277,105 @@ def _fetch_source(src):
     return jobs, status
 
 
+def _cfg():
+    try:
+        with open(os.path.join(ROOT, "aply-config.json"), encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def feeds_allowed():
+    """Third-party feeds the owner has explicitly switched on (default: none). See the legal notes at the top."""
+    f = _cfg().get("feeds")
+    return {x for x in f if isinstance(x, str)} if isinstance(f, list) else set()
+
+
+# ---- partner employers: postings an employer gave us and who agreed to receive applications ----
+_partners = {"path": None, "mtime": None, "jobs": []}
+
+
+def _clean(v, n):
+    return re.sub(r"\s+", " ", v).strip()[:n] if isinstance(v, str) else ""
+
+
+def partner_jobs():
+    """Jobs from aply-partners.json (or the placeholder-only partners.example.json). Each employer must record how it
+    consented. An employer with a contact address receives applications directly; without one it is link-out only."""
+    path = next((os.path.join(ROOT, n) for n in ("aply-partners.json", "partners.example.json")
+                 if os.path.exists(os.path.join(ROOT, n))), None)
+    if not path:
+        return []
+    try:
+        mtime = os.path.getmtime(path)
+        if _partners["path"] == path and _partners["mtime"] == mtime:
+            return _partners["jobs"]
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        return _partners["jobs"]
+    out = []
+    for e in data.get("employers", []) if isinstance(data, dict) else []:
+        name, consent = _clean(e.get("name"), 100), _clean(e.get("consent"), 300)
+        if not name or not consent:
+            continue                                   # no recorded consent, no listing
+        contact = _clean(e.get("contact"), 120)
+        contact = contact if re.match(r"^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$", contact) else ""
+        for j in e.get("jobs", []):
+            role, skills = _clean(j.get("role"), 120), [_clean(s, 40) for s in (j.get("skills") or [])[:6] if _clean(s, 40)]
+            if not role or not skills:
+                continue
+            url = _clean(j.get("url") or e.get("url"), 400)
+            sal = j.get("sal") if isinstance(j.get("sal"), list) and len(j["sal"]) == 2 else [0, 0]
+            try:
+                sal = [max(0, int(sal[0])), max(0, int(sal[1]))]
+            except (TypeError, ValueError):
+                sal = [0, 0]
+            out.append(dict(
+                id=200000 + int(hashlib.sha1(("partner:%s:%s" % (name, role)).encode()).hexdigest()[:6], 16),
+                co=name, role=role, loc=_clean(j.get("loc"), 80) or "Not listed",
+                mode=j.get("mode") if j.get("mode") in ("remote", "hybrid", "onsite") else "remote", sal=sal,
+                yrs=min(15, max(0, int(j.get("yrs") or 0))) if str(j.get("yrs") or 0).isdigit() else 0,
+                edu=j.get("edu") if j.get("edu") in ("High school", "Associate", "Bachelor", "Master", "Doctorate") else "High school",
+                skills=skills, blurb=_clean(j.get("blurb"), 220),
+                type=j.get("type") if j.get("type") in ("job", "internship", "coop") else "job",
+                url=url if url.startswith("https://") else "", source="Direct from %s (partner employer)" % name,
+                contact=contact, apply="direct" if contact else "link", partner=True, live=True))
+    _partners.update(path=path, mtime=mtime, jobs=out)
+    return out
+
+
+def job_policy(job_id):
+    """How an application to this job may be handled: 'direct' (the employer opted in), 'link' (send the person to the
+    employer's own page; nothing is emailed) or 'unknown' (an example listing)."""
+    for j in partner_jobs():
+        if j["id"] == job_id:
+            return j["apply"]
+    with _lock:
+        for c in _cache.values():
+            if any(j["id"] == job_id for j in c["jobs"]):
+                return "link"
+    return "unknown"
+
+
 def get_jobs():
+    allowed = feeds_allowed()
+    sources = [s for s in SOURCES if s[0] in allowed]
     with ThreadPoolExecutor(max_workers=8) as ex:
-        results = list(ex.map(_load_source, SOURCES))
+        results = list(ex.map(_load_source, sources))
     jobs, seen, summary = [], set(), {}
-    for src, (js, status) in zip(SOURCES, results):
+    for pj in partner_jobs():
+        seen.add(pj["id"])
+        jobs.append(pj)
+    summary["Partner employers"] = "%d jobs" % len(jobs)
+    for src, (js, status) in zip(sources, results):
         summary[src[2] + ("/" + src[1] if src[0] in MULTI else "")] = status
         for j in js:
             if j["id"] not in seen:
                 seen.add(j["id"])
                 jobs.append(j)
+    if not sources:
+        summary["Third-party feeds"] = "off (not verified as permitted)"
     return {"fetched_at": int(time.time()), "sources": summary, "jobs": jobs}
 
 

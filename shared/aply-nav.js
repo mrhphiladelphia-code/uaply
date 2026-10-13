@@ -59,6 +59,7 @@ body{padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}
 #pane-track .row{flex-wrap:wrap}
 #pane-track .acts{display:flex;gap:6px;flex-wrap:wrap;flex-basis:100%}
 #pane-track .acts .btn{padding:6px 12px;font-size:13px}
+#legalbar{flex:none;text-align:center;font-size:12px;color:var(--muted);padding-bottom:2px}#legalbar a{color:inherit;text-underline-offset:2px}
 #filtersSec{display:flex;flex-direction:column;gap:14px}
 #filtersSec input[type=range]{width:100%;accent-color:var(--accent)}
 `;
@@ -104,6 +105,12 @@ function apply(w,host){
     nav.appendChild(wrap);
   });
   main.after(nav);
+  /* fine print: always one tap away (App Store and Google Play also expect a reachable privacy policy) */
+  var lp=(host&&host.defaultView&&host.defaultView.location.pathname)||"/",LB=/\/(sandbox|dev)\/$/.test(lp)?"../legal/":"legal/";
+  var legalbar=d.createElement("div");legalbar.id="legalbar";
+  legalbar.innerHTML=[["terms.html","Terms"],["privacy.html","Privacy"],["ai-and-employment.html","AI and matching"],["copyright.html","Copyright"]]
+    .map(function(l){return '<a href="'+LB+l[0]+'" target="_blank" rel="noopener noreferrer">'+l[1]+'</a>'}).join(" · ");
+  nav.after(legalbar);
 
   function count(k,v){
     var n=0;

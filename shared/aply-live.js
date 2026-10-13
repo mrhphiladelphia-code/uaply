@@ -32,9 +32,10 @@ function patch(s){
   s=once(s,"'+money(j.sal[0])+'–'+money(j.sal[1])+'<small>per year</small>","'+(j.sal[1]>0?money(j.sal[0])+'–'+money(j.sal[1])+'<small>per year</small>':'Pay not listed')+'");
   s=once(s,"var salOk=job.sal[1]>=p.salary;","var unk=job.sal[1]<=0;var salOk=unk||job.sal[1]>=p.salary;");
   s=once(s,'s:salOk?1:(sa>=0.9?0.5:0),ask:money(job.sal[0])+" to "+money(job.sal[1])','s:unk?0.5:salOk?1:(sa>=0.9?0.5:0),ask:unk?"Not listed":money(job.sal[0])+" to "+money(job.sal[1])');
-  s=once(s,"<p class=\"blurb\">'+esc(j.blurb)+'</p>","<p class=\"blurb\">'+esc(j.blurb)+'</p>'+(j.url?'<button type=\"button\" class=\"linkbtn\" data-open=\"'+esc(j.url)+'\">View posting on '+esc(j.source||'the company site')+' ↗</button>':'')+'");
+  /* every real listing names its source and links to the original; example listings say they are examples */
+  s=once(s,"<p class=\"blurb\">'+esc(j.blurb)+'</p>","<p class=\"blurb\">'+esc(j.blurb)+'</p>'+(j.url?'<button type=\"button\" class=\"linkbtn\" data-open=\"'+esc(j.url)+'\">View original posting ↗</button>':'')+(j.live?'<small class=\"note\">Source: '+esc(j.source||'the employer')+'</small>':'<small class=\"note\">Example listing, not a real opening.</small>')+'");
   s=once(s,'toast(dir==="applied"?"Applied to "+job.co+" · "+m.pct+"% match":"Passed on "+job.co,"Undo",undo);',
-    'if(dir==="applied"&&window.__aplyQuiet&&window.__aplySubmitOn){}else if(dir==="applied"&&job.url&&!window.__aplyOnApplied){toast("Saved "+job.co+" · "+m.pct+"% match. Finish on their site.","Open",function(){window.__aplyOpen(job.url)})}else{toast(dir==="applied"?"Saved "+job.co+" to Applied · "+m.pct+"% match":"Passed on "+job.co,"Undo",undo)}');
+    'if(dir==="applied"&&job.live&&window.__aplyQuiet&&window.__aplySubmitOn){}else if(dir==="applied"&&job.url&&!window.__aplyOnApplied){toast("Saved "+job.co+" · "+m.pct+"% match. Finish on their site.","Open",function(){window.__aplyOpen(job.url)})}else{toast(dir==="applied"?"Saved "+job.co+" to Applied · "+m.pct+"% match":"Passed on "+job.co,"Undo",undo)}');
   return s;
 }
 
@@ -215,6 +216,26 @@ function kitApply(w,host){
     if(ms!==0)w.__kitToastT=w.setTimeout(function(){t.remove()},ms||6000);
     return {el:t,set:function(x){s.textContent=x}};
   }
+  /* first application only: say plainly what a swipe right does with the person's details, and get agreement */
+  var CONSENT_V=1;
+  function legalBase(){var p=(host&&host.defaultView&&host.defaultView.location.pathname)||"/";return /\/(sandbox|dev)\/$/.test(p)?"../legal/":"legal/"}
+  function consentKey(){return (w.__aplyKey||"aply")+".consent"}
+  function ensureConsent(go,cancel){
+    try{var c=JSON.parse(w.localStorage.getItem(consentKey()));if(c&&c.v===CONSENT_V){go();return}}catch(e){}
+    var b=legalBase(),o=d.createElement("div");o.id="kitConsent";
+    o.style.cssText="position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:16px;background:rgba(0,0,0,.45);overflow:auto";
+    o.innerHTML='<div role="dialog" aria-modal="true" aria-labelledby="kcH" style="background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:18px;padding:20px;max-width:460px;width:100%;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px;font-size:14px">'+
+      '<h2 id="kcH" style="margin:0;font:800 20px var(--display)">Before your first application</h2>'+
+      '<p style="margin:0">When you swipe right, Aply applies for you. It sends the details in your profile (your name, email, and anything else you filled in, such as phone, resume link, education or work authorization) to the employer, but only if that employer has agreed to receive applications through Aply. Otherwise it sends you to the employer\'s own application page. Aply never emails a company that has not agreed.</p>'+
+      '<p style="margin:0">The match percentage is worked out automatically from your profile to help order jobs. It never rejects you, and employers make every hiring decision. <a href="'+b+'ai-and-employment.html" target="_blank" rel="noopener noreferrer">How matching works</a></p>'+
+      '<p style="margin:0">By continuing you confirm you are 18 or older and agree to the <a href="'+b+'terms.html" target="_blank" rel="noopener noreferrer">Terms of Service</a> and <a href="'+b+'privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</p>'+
+      '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button type="button" class="btn ghost" id="kcNo">Cancel</button><button type="button" class="btn" id="kcYes">Agree and continue</button></div></div>';
+    d.body.appendChild(o);
+    d.getElementById("kcYes").focus();
+    d.getElementById("kcYes").onclick=function(){try{w.localStorage.setItem(consentKey(),JSON.stringify({v:CONSENT_V,at:Date.now()}))}catch(e){}o.remove();go()};
+    d.getElementById("kcNo").onclick=function(){o.remove();cancel()};
+    o.addEventListener("keydown",function(e){if(e.key==="Escape"){o.remove();cancel()}});
+  }
   function openProfile(){var b=d.getElementById("nb-prof");if(b){b.click();var it=d.querySelector('.nwrap[data-k=prof] .nitem[data-v=settings]');if(it)it.click()}}
   function quietApply(job,m,p,undo,S,save){
     var live=w.__aplyMode==="live",auto=w.__aplyAuto!==false;
@@ -236,7 +257,7 @@ function kitApply(w,host){
         if(j.status==="delivered_test")toast("Application sent to "+job.co+" (test inbox)");
         else if(j.status==="sent")toast("Application sent to "+job.co+". Replies go to "+p.email+".");
         else if(j.status==="duplicate")toast("You already applied to "+job.co+".");
-        else if(j.status==="handoff")toast(job.co+" takes applications on its own site.","Apply there",function(){if(w.__aplyOpen)w.__aplyOpen(job.url)},12000);
+        else if(j.status==="handoff")toast(job.co+" takes applications on its own site.",job.url?"Apply there":"",function(){if(w.__aplyOpen)w.__aplyOpen(job.url)},12000);
         else if(j.status==="failed")toast(j.error||"The email could not be sent.","Try again",deliver,9000);
         else toast("Done.");
       }).catch(function(){toast("Could not reach the server.","Try again",deliver,9000)});
@@ -260,9 +281,9 @@ function kitApply(w,host){
     if(ready){
       post("/api/decision",{session:session(),dir:dir==="applied"?"apply":"pass",jobId:job.id,co:job.co,role:job.role,pct:m.pct}).catch(function(){});
     }
-    if(dir!=="applied"||!job.url)return;
-    if(ready&&!showSheet)quietApply(job,m,p,undo,S,save);
-    else sheet(job,m,p,undo,S,save);
+    if(dir!=="applied"||!job.live)return;                      /* example listings are only saved; nothing is sent anywhere */
+    if(ready&&!showSheet)ensureConsent(function(){quietApply(job,m,p,undo,S,save)},undo);
+    else if(job.url)sheet(job,m,p,undo,S,save);
   };
   w.__aplyQuiet=!showSheet;
 }

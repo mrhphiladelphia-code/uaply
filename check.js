@@ -36,6 +36,16 @@ console.log("JSON files");
   try { JSON.parse(fs.readFileSync(f, "utf8")); ok(f); } catch (e) { bad(f + ": " + e.message); }
 });
 
+console.log("Legal pages");
+try {
+  ["index", "terms", "privacy", "ai-and-employment", "copyright"].forEach((n) => {
+    const s = fs.readFileSync("legal/" + n + ".html", "utf8");
+    const open = (s.match(/<mark>/g) || []).length, close = (s.match(/<\/mark>/g) || []).length;
+    open === close ? ok("legal/" + n + ".html (" + open + " blank" + (open === 1 ? "" : "s") + " to fill in before publishing)") : bad("legal/" + n + ".html has an unclosed <mark>");
+  });
+  if (!fs.existsSync("legal/style.css")) bad("legal/style.css is missing");
+} catch (e) { bad("legal pages: " + e.message); }
+
 console.log("Every experiment still applies to the production page");
 try {
   global.window = {}; global.localStorage = { getItem() { return null; } };
