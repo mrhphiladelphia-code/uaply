@@ -80,3 +80,11 @@ Apple and Google reject or remove apps over confusingly similar names, and a tra
 - Do we owe employers a contract before sending them applications, and what should it say?
 - Should we limit liability or require arbitration, and is a class waiver enforceable in our state?
 - If we add AI ranking or auto-apply, what audits and notices will we need?
+
+## 10. Decisions made after this review (October 13, 2026)
+
+These were added at the product owner's request after the review above, so parts of sections 2 and 3 no longer describe the app. They need the attorney review before launch.
+
+- **Voluntary self-identification** (Profile, Settings): Hispanic or Latino, race or ethnicity, gender, veteran status and disability status, the questions many employers ask on their forms. Safeguards built: every question is optional and starts as "Not answered", each has "Prefer not to say", answers are stored only on the person's device (never sent to the server or to employers automatically), are never used to score, rank, filter or hide listings, and leave the device only when the person taps "Copy my answers". The Privacy Policy draft and the first-application notice now say this. **Ask the attorney:** whether a job app may offer this at all, whether these answers count as sensitive data under the state laws that apply to you, and whether "on the device only" changes that.
+- **Message to the hiring manager** (Profile, Preferences): an opt-in, Plus and Pro only preference that adds a short message, filled in from the profile and the listing with a fixed template (not AI), to the application. It goes only where an application goes: to partner employers that agreed to receive applications. The Privacy Policy draft and the first-application notice mention it. **Ask the attorney:** whether writing this message on the person's behalf changes the "applies on your behalf" (agency) question in section 9, and what changes if an AI later writes it (section 4).
+- **Accounts:** email and password sign-up with an 18+ and Terms confirmation, hashed passwords, and in-app account deletion that also removes the person's receipts and server application records (section 5 asked for deletion before accounts launch). A signed-in person gets an email receipt of each application at their own address.

@@ -348,7 +348,6 @@ function apply(w,host){
 
   /* ---------- account: per-application details, preferences/filters, resume, plan, data, dashboard overview ---------- */
   var AK=w.__uaplyKey+".acct",E=A.esc,OPEN={};
-  var EXPER=!!OPTS.experimental;   /* sandbox sets UAplyOpts.experimental: shows features the legal review has not cleared */
   var PLANS={
     trial:{name:"Free trial",price:0,cap:10,days:14,perks:["10 applications","14 days","Every feature"]},
     starter:{name:"Starter",price:9,cap:30,perks:["30 applications a month","Dashboard and tracking","Resume and links"]},
@@ -765,17 +764,17 @@ function apply(w,host){
     var yf=d.getElementById("pYears").closest(".field"),xl=d.createElement("small");xl.id="xpLevel";yf.appendChild(xl);
     function paintLevel(){var y=+d.getElementById("pYears").value||0;xl.textContent="Your level: "+levelOf(y)[1]}
     d.getElementById("pYears").addEventListener("input",paintLevel);
-    /* work eligibility, plus (sandbox experiment only) voluntary self-identification. UAply's legal review says not to
-       collect race, ethnicity, sex, disability or veteran status, so those appear only when UAplyOpts.experimental is set. */
+    /* work eligibility and voluntary self-identification (the questions US employers ask on their forms). Every answer is
+       optional and starts as "Not answered". They stay on this device, are never used to score, rank or filter jobs, and
+       leave the device only when the person taps "Copy my answers". The owner's legal review advised against collecting
+       these; the product owner chose to include them on 2026-10-13, so they need the attorney review before launch. */
     var ev=d.createElement("div");ev.className="field full";ev.id="aEeo";
     var NAMES={auth:"Work authorization",sponsor:"Visa sponsorship",veteran:"Veteran status",hisp:"Hispanic or Latino",disability:"Disability",gender:"Gender"};
-    ev.innerHTML=(EXPER
-        ?'<h3 style="margin:0;font-size:15px">Voluntary information (optional)</h3><small><b>Sandbox experiment.</b> UAply\'s legal review says not to collect race, ethnicity, sex, disability or veteran status, so these questions are not in dev until a lawyer approves them. Used only to fill in employer forms for you, never to score, rank or filter jobs, and shared only when you tap Copy my answers. Stored on this device.</small>'
-        :'<h3 style="margin:0;font-size:15px">Work eligibility (optional)</h3><small>Used only to fill in employer forms for you, never to score or filter jobs. Stored on this device.</small>')+
-      (EXPER?["auth","sponsor","veteran","hisp","disability","gender"]:["auth","sponsor"]).map(function(k){
+    ev.innerHTML='<h3 style="margin:0;font-size:15px">Voluntary information (optional)</h3><small>Many employers ask these on their application forms. Answering is up to you, and every question has "Prefer not to say". Your answers are used only to fill in employer forms for you, never to score, rank or filter jobs, and are shared only when you tap Copy my answers. Stored on this device.</small>'+
+      ["auth","sponsor","veteran","hisp","disability","gender"].map(function(k){
         return '<div class="field"><label for="ev-'+k+'">'+NAMES[k]+'</label><select id="ev-'+k+'" data-eeo="'+k+'"><option value="">Not answered</option>'+EEO[k].filter(Boolean).map(function(o){return '<option>'+E(o)+'</option>'}).join("")+'</select></div>';
       }).join("")+
-      (EXPER?'<div class="field"><span class="l">Race or ethnicity</span><div class="checks" id="ev-race">'+EEO.race.map(function(o){return '<label><input type="checkbox" data-race="'+E(o)+'"> '+E(o)+'</label>'}).join("")+'</div></div>':'')+
+      '<div class="field"><span class="l">Race or ethnicity</span><div class="checks" id="ev-race">'+EEO.race.map(function(o){return '<label><input type="checkbox" data-race="'+E(o)+'"> '+E(o)+'</label>'}).join("")+'</div></div>'+
       '<div><button type="button" class="btn ghost" id="evClear">Clear these answers</button></div><small id="evNote" role="status"></small>';
     d.querySelector("#form .grid").appendChild(ev);FIELDS.settings.push("aEeo");
     function fillEeo(){
@@ -797,7 +796,7 @@ function apply(w,host){
       if(line)add("Address",line+(tail?", "+tail:""));else add("City",p.loc);add("LinkedIn",linkOf("linkedin"));add("Portfolio",linkOf("portfolio"));add("Resume link",resumeLinkOf());add("Current title",p.title);
       add("Years of experience",p.years);add("Highest education",p.edu);add("Skills",p.skills.join(", "));add("Can start",startOf());
       add("Work authorization",authOf());add("Visa sponsorship",sponsorOf());
-      var vol=EXPER?[["Veteran status",e.veteran],["Hispanic or Latino",e.hisp],["Race or ethnicity",e.race.join(", ")],["Disability",e.disability],["Gender",e.gender]].filter(function(x){return x[1]}):[];
+      var vol=[["Veteran status",e.veteran],["Hispanic or Latino",e.hisp],["Race or ethnicity",e.race.join(", ")],["Disability",e.disability],["Gender",e.gender]].filter(function(x){return x[1]});
       if(vol.length){L.push("","Voluntary self-identification:");vol.forEach(function(x){add(x[0],x[1])})}
       return L.join("\n");
     };
@@ -942,11 +941,12 @@ function apply(w,host){
     paintCount();
   })();
 
-  /* auto message to the hiring manager on swipe right: opt-in, Plus and Pro only.
-     SANDBOX EXPERIMENT ONLY: UAply's legal review says no cover note or message is written for the recruiter, so this is
-     off unless the host page sets UAplyOpts.experimental (the sandbox does; dev does not). */
+  /* message to the hiring manager on swipe right: opt-in (off by default), Plus and Pro only. It goes out with the
+     application, so only to employers that agreed to receive applications through UAply (the server decides that).
+     The owner's legal review advised against writing messages for recruiters; the product owner chose to include it on
+     2026-10-13, so it needs the attorney review before launch. */
   function autoAllowed(){var s=planState();return acct.plan!=="trial"&&s.ok}
-  w.__uaplyAutoMsg=function(){return EXPER&&autoAllowed()&&!!acct.fAuto};
+  w.__uaplyAutoMsg=function(){return autoAllowed()&&!!acct.fAuto};
   w.__uaplyMessage=function(job,m,p){
     var skills=(m.matched||[]).slice(0,3),name=p.name||"[Your name]",sumv=summaryOf();
     var fit=skills.length?"My experience with "+skills.join(", ")+" lines up with what the role asks for":"My background lines up well with what the role asks for";
@@ -958,7 +958,6 @@ function apply(w,host){
     return "Hi "+job.co+" hiring team,\n\nI just applied for the "+job.role+" role. "+who+sum+fit+yrs+". I'd be glad to work "+(where==="remote"?"remotely":"with "+where)+" and can talk whenever suits you.\n\nThank you for your time,\n"+sign;
   };
   (function(){
-    if(!EXPER)return;
     var f=d.createElement("div");f.className="field full";f.id="aAutoF";
     f.innerHTML='<span class="l">Message the hiring manager</span><div class="checks"><label><input type="checkbox" id="aAutoMsg"> Send a personalized message with my application the moment I swipe right</label></div>'+
       '<small id="aAutoNote"></small><div><button type="button" class="btn ghost" id="aAutoPlans" hidden>See plans</button></div>';
@@ -969,7 +968,7 @@ function apply(w,host){
       cb.disabled=!ok;cb.checked=ok&&!!acct.fAuto;
       d.getElementById("aAutoPlans").hidden=ok;
       d.getElementById("aAutoNote").textContent=ok
-        ?"Sandbox experiment. Opt-in, off until you turn it on. The message is written from your profile and the job (a template for now) and goes out with your application. UAply's legal review says not to write messages for recruiters, so this is not in dev."
+        ?"Off until you turn it on. The message is written from your profile and the job (a template for now) and goes out with your application, only to employers that accept applications through UAply. An application cannot be unsent."
         :"A Plus and Pro feature. Plus and Pro members can turn this on.";
     }
     d.getElementById("aAutoMsg").addEventListener("change",function(e){acct.fAuto=e.target.checked&&autoAllowed();saveA();sync()});
@@ -1335,7 +1334,6 @@ function apply(w,host){
     dup(d.getElementById("resLinkWrap"));
     dup(d.getElementById("setMeter"));
     ["ev-auth","ev-sponsor"].forEach(function(id){var x=d.getElementById(id);dup(x&&x.closest(".field"))});
-    if(!EXPER)dup(d.getElementById("aEeo"));        /* only the two questions above were in it */
     if(!acctSec.hidden&&sub.prof==="resume")renderAcct("resume");
   },0);
 }
