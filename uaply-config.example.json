@@ -3,6 +3,7 @@
   "delivery": "live",
   "auto_send": true,
   "grace_seconds": 5,
+  "owner_copy": "your-own-address@example.com",
   "test_recipient": "your-test-inbox@example.com",
   "daily_limit": 20,
   "smtp": {

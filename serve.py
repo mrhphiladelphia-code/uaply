@@ -3,7 +3,7 @@ Serves ROOT; each urlpath=file alias maps one URL to a file outside ROOT (e.g. /
 --api also exposes the back end used by sandbox and dev (prod does not):
   GET  /api/jobs          real postings (jobs_api.py)
   GET  /api/apply/config  delivery mode
-  POST /api/apply         swipe right: deliver an application (apply_api.py)
+  POST /api/apply         swipe right: deliver an application (uaply_api.py)
   POST /api/decision      swipe left or right: record the swipe
   GET  /outbox            simulated recruiter inbox + swipe stats   (/api/outbox for JSON)"""
 import sys, os, json, http.server
@@ -26,8 +26,8 @@ if api:
                      ("/uaply-live.js", "shared/uaply-live.js"), ("/uaply-profile.js", "shared/uaply-profile.js"),
                      ("/prod-index.html", "prod/index.html")):
         alias.setdefault(url, os.path.join(HERE, rel))
-    import jobs_api, apply_api
-    apply_api.init(os.path.basename(root))
+    import jobs_api, uaply_api
+    uaply_api.init(os.path.basename(root))
     import threading
     threading.Thread(target=jobs_api.get_jobs, daemon=True).start()   # warm the job cache so the first visitor does not wait
 
@@ -59,11 +59,11 @@ class H(http.server.SimpleHTTPRequestHandler):
                 if p == "/api/jobs":
                     return self._send(200, jobs_api.get_json())
                 if p == "/api/apply/config":
-                    return self._send(200, apply_api.public_config())
+                    return self._send(200, uaply_api.public_config())
                 if p == "/api/outbox":
-                    return self._send(200, apply_api.outbox_json())
+                    return self._send(200, uaply_api.outbox_json())
                 if p == "/outbox":
-                    return self._send(200, apply_api.outbox_html(), "text/html; charset=utf-8")
+                    return self._send(200, uaply_api.outbox_html(), "text/html; charset=utf-8")
             except Exception as e:
                 return self._send(502, {"error": str(e)[:100]})
         super().do_GET()
@@ -86,7 +86,7 @@ class H(http.server.SimpleHTTPRequestHandler):
         except Exception:
             return self._send(400, {"error": "bad request"})
         try:
-            code, out = apply_api.submit(payload) if p == "/api/apply" else apply_api.record_decision(payload)
+            code, out = uaply_api.submit(payload) if p == "/api/apply" else uaply_api.record_decision(payload)
         except Exception as e:
             code, out = 500, {"error": "server error: " + str(e)[:100]}
         self._send(code, out)

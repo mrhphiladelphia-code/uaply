@@ -24,7 +24,7 @@ python serve.py 8767 dev --api
 ```
 
 `--api` turns on the back end: real job postings from public employer feeds (`jobs_api.py`) and application delivery
-(`apply_api.py`). By default applications go to a simulated inbox at `/outbox` and nothing leaves your computer.
+(`uaply_api.py`). By default applications go to a simulated inbox at `/outbox` and nothing leaves your computer.
 
 To email real recruiters, copy `uaply-config.example.json` to `uaply-config.json` and add your own mail login. That file
 and the `data/` folder are ignored by git and must never be committed.

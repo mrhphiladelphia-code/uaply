@@ -26,7 +26,7 @@ console.log("Scripts inside the pages");
 
 console.log("Python files");
 const py = process.platform === "win32" ? "python" : "python3";
-["serve.py", "jobs_api.py", "apply_api.py"].forEach((f) => {
+["serve.py", "jobs_api.py", "uaply_api.py"].forEach((f) => {
   const r = spawnSync(py, ["-m", "py_compile", f], { encoding: "utf8" });
   r.status === 0 ? ok(f) : bad(f + "\n" + (r.stderr || r.error));
 });

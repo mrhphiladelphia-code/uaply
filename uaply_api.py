@@ -67,7 +67,7 @@ def public_config():
         grace = max(0, min(30, int(cfg.get("grace_seconds", 5))))
     except (TypeError, ValueError):
         grace = 5
-    return {"mode": cfg["delivery"], "canEmail": _smtp_ready(cfg), "redirect": _redirect(cfg),
+    return {"mode": cfg["delivery"], "canEmail": _smtp_ready(cfg), "redirect": _redirect(cfg), "ownerCopy": bool(_owner_copy(cfg)),
             "autoSend": cfg.get("auto_send", True) is not False, "graceSeconds": grace}
 
 
@@ -212,6 +212,45 @@ def _send_email(cfg, to, cand, job, note, original=""):
         srv.send_message(msg)
 
 
+def _owner_copy(cfg):
+    """The owner's own address, if set in the config under 'owner_copy'. Every application is also emailed there."""
+    r = cfg.get("owner_copy")
+    return r.strip() if isinstance(r, str) and EMAIL_RE.match(r.strip()) else ""
+
+
+def _copy_message(cfg, rec):
+    """A labelled copy of one application for the owner's inbox (built separately so it can be tested without sending)."""
+    c, j = rec["candidate"], rec["job"]
+    where = {"delivered_test": "the simulated test inbox on this computer (nothing was sent to %s)" % j["co"],
+             "sent": "%s by email" % rec.get("to", ""),
+             "handoff": "no one: %s takes applications on its own site" % j["co"]}.get(rec["status"], rec["status"])
+    msg = EmailMessage()
+    msg["From"] = cfg["smtp"]["from_addr"]
+    msg["To"] = _owner_copy(cfg)
+    msg["Subject"] = "[UAply copy] Application: %s at %s (%s)" % (j["role"], j["co"], rec["status"])
+    msg.set_content("This is a copy for you, the UAply owner. The application went to: %s.\n\n%s\n\n--\nPosting: %s\n"
+                    % (where, _application_text(c, j, rec.get("note", "")), j["url"]))
+    return msg
+
+
+def _send_owner_copy(cfg, rec):
+    """Best effort: a failed copy never affects the application itself. Returns True when the copy was sent."""
+    owner = _owner_copy(cfg)
+    if not owner or not _smtp_ready(cfg) or (rec["status"] == "sent" and rec.get("to", "").lower() == owner.lower()):
+        return False                       # nothing to do, or the owner already received the application itself
+    try:
+        s = cfg["smtp"]
+        with smtplib.SMTP(s["host"], int(s.get("port", 587)), timeout=20) as srv:
+            if s.get("starttls", True):
+                srv.starttls()
+            if s.get("user"):
+                srv.login(s["user"], s.get("password", ""))
+            srv.send_message(_copy_message(cfg, rec))
+        return True
+    except Exception:
+        return False
+
+
 def submit(p):
     """Returns (http_status, dict)."""
     err = _validate(p)
@@ -282,7 +321,8 @@ def submit(p):
             if err:
                 rec["error"] = err
             _append("applications.jsonl", rec)
-    out = {"status": rec["status"], "id": rec["id"], "to": rec["to"], "mode": mode, "simulated": rec["simulated"]}
+    out = {"status": rec["status"], "id": rec["id"], "to": rec["to"], "mode": mode, "simulated": rec["simulated"],
+           "copied": _send_owner_copy(cfg, rec) if rec["status"] != "failed" else False}
     if rec.get("error"):
         out["error"] = "The email could not be sent: " + rec["error"]
     return 200, out

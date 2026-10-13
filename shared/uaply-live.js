@@ -2,7 +2,7 @@
    live   : loads real postings from this server's /api/jobs (see jobs_api.py) and links every card to the original.
    kit    : after a swipe right on a real posting, a sheet with a ready-to-send note, Copy, an email draft and the
             employer's application page.
-   submit : the sheet also delivers the application through this server (see apply_api.py): in test mode to a
+   submit : the sheet also delivers the application through this server (see uaply_api.py): in test mode to a
             simulated recruiter inbox, in live mode by email to the recruiter after the user reviews and presses Send.
             Swipes in either direction are logged so you can see whether people actually swipe. */
 (function(){
@@ -35,7 +35,7 @@ function patch(s){
   /* every real listing names its source and links to the original; example listings say they are examples */
   s=once(s,"<p class=\"blurb\">'+esc(j.blurb)+'</p>","<p class=\"blurb\">'+esc(j.blurb)+'</p>'+(j.url?'<button type=\"button\" class=\"linkbtn\" data-open=\"'+esc(j.url)+'\">View original posting ↗</button>':'')+(j.live?'<small class=\"note\">Source: '+esc(j.source||'the employer')+'</small>':'<small class=\"note\">Example listing, not a real opening.</small>')+'");
   s=once(s,'toast(dir==="applied"?"Applied to "+job.co+" · "+m.pct+"% match":"Passed on "+job.co,"Undo",undo);',
-    'if(dir==="applied"&&job.live&&window.__uaplyQuiet&&window.__uaplySubmitOn){}else if(dir==="applied"&&job.url&&!window.__uaplyOnApplied){toast("Saved "+job.co+" · "+m.pct+"% match. Finish on their site.","Open",function(){window.__uaplyOpen(job.url)})}else{toast(dir==="applied"?"Saved "+job.co+" to Applied · "+m.pct+"% match":"Passed on "+job.co,"Undo",undo)}');
+    'if(dir==="applied"&&(job.live||window.__uaplyMode==="test")&&window.__uaplyQuiet&&window.__uaplySubmitOn){}else if(dir==="applied"&&job.url&&!window.__uaplyOnApplied){toast("Saved "+job.co+" · "+m.pct+"% match. Finish on their site.","Open",function(){window.__uaplyOpen(job.url)})}else{toast(dir==="applied"?"Saved "+job.co+" to Applied · "+m.pct+"% match":"Passed on "+job.co,"Undo",undo)}');
   return s;
 }
 
@@ -247,15 +247,16 @@ function kitApply(w,host){
     function deliver(){
       /* the application is the profile itself: no cover note or message is written for the recruiter */
       post("/api/apply",{consent:true,confirm_real:live,match:m.pct,note:"",
-        job:{id:job.id,co:job.co,role:job.role,url:job.url,source:job.source,loc:job.loc,contact:job.contact||""},
+        job:{id:job.id,co:job.co,role:job.role,url:job.url||"https://example.com/example-listing",source:job.source,loc:job.loc,contact:job.contact||""},
         profile:{name:p.name,email:p.email,title:p.title,years:p.years,skills:p.skills,loc:p.loc,edu:p.edu,ext:p.ext||{}}
       }).then(function(r){
         var j=r.j||{};
         if(!r.ok){toast(j.error||"Could not send your application.","Try again",deliver,9000);return}
         var dec=S&&S.decisions&&S.decisions[job.id];
         if(dec&&j.status!=="duplicate"){dec.sent={at:Date.now(),to:j.to||"",status:j.status};if(save)save()}
-        if(j.status==="delivered_test")toast("Application sent to "+job.co+" (test inbox)");
-        else if(j.status==="sent")toast("Application sent to "+job.co+". Replies go to "+p.email+".");
+        var cp=j.copied?" A copy was emailed to you.":"";
+        if(j.status==="delivered_test")toast("Application sent to "+job.co+" (test inbox)."+cp);
+        else if(j.status==="sent")toast("Application sent to "+job.co+". Replies go to "+p.email+"."+cp);
         else if(j.status==="duplicate")toast("You already applied to "+job.co+".");
         else if(j.status==="handoff")toast(job.co+" takes applications on its own site.",job.url?"Apply there":"",function(){if(w.__uaplyOpen)w.__uaplyOpen(job.url)},12000);
         else if(j.status==="failed")toast(j.error||"The email could not be sent.","Try again",deliver,9000);
@@ -281,7 +282,9 @@ function kitApply(w,host){
     if(ready){
       post("/api/decision",{session:session(),dir:dir==="applied"?"apply":"pass",jobId:job.id,co:job.co,role:job.role,pct:m.pct}).catch(function(){});
     }
-    if(dir!=="applied"||!job.live)return;                      /* example listings are only saved; nothing is sent anywhere */
+    /* real listings always go through the apply flow; the made-up example listings only do so in test mode,
+       where "sending" means the simulated inbox (and your own copy), never a real company */
+    if(dir!=="applied"||(!job.live&&w.__uaplyMode!=="test"))return;
     if(ready&&!showSheet)ensureConsent(function(){quietApply(job,m,p,undo,S,save)},undo);
     else if(job.url)sheet(job,m,p,undo,S,save);
   };
