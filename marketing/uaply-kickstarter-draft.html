@@ -1,0 +1,131 @@
+<title>UAply Kickstarter Draft</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Public+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: draft campaign page on top, user-only steps and video script below; each copy block has a copy button. */
+:root{
+  --bg:#f6f7f4; --surface:#ffffff; --fg:#17201b; --muted:#5b665f; --line:#dde2dc;
+  --accent:#0b7a53; --accent-soft:#dff2ea; --warn:#b4540a; --warn-soft:#fbeadb;
+  --display:"Bricolage Grotesque","Trebuchet MS",sans-serif; --body:"Public Sans",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1613; --surface:#18221d; --fg:#e8eee9; --muted:#9aa89f; --line:#2b3932;
+  --accent:#4cc28f; --accent-soft:#17352a; --warn:#f0a15e; --warn-soft:#3a2614; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1613; --surface:#18221d; --fg:#e8eee9; --muted:#9aa89f; --line:#2b3932;
+  --accent:#4cc28f; --accent-soft:#17352a; --warn:#f0a15e; --warn-soft:#3a2614; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:16px/1.55 var(--body);padding-inline:16px}
+main{max-width:820px;margin:0 auto;padding-block:32px 64px;display:flex;flex-direction:column;gap:36px}
+h1,h2{font-family:var(--display);text-wrap:balance;margin:0 0 10px;line-height:1.1}
+h1{font-size:clamp(2rem,6vw,2.8rem);font-weight:800} h2{font-size:1.4rem;font-weight:800}
+h3{margin:0 0 4px;font-size:1rem}
+p{margin:0 0 10px;max-width:65ch}
+.eyebrow{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.muted{color:var(--muted)}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.box p:last-child{margin-bottom:0}
+.note{background:var(--warn-soft);border:1px solid var(--warn);border-radius:10px;padding:14px}
+.note b{color:var(--warn)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+button{font:600 .8rem var(--body);background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent);border-radius:8px;padding:5px 12px;cursor:pointer}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.price{font:800 1.6rem var(--display);color:var(--accent);font-variant-numeric:tabular-nums}
+ul,ol{margin:0;padding-left:1.2rem} li{margin-bottom:5px}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+tr:last-child td{border-bottom:0}
+.scroll{overflow-x:auto}
+.tag{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:99px;padding:1px 9px;font-size:.78rem;font-weight:600}
+</style>
+<main>
+<header>
+  <div class="eyebrow">UAply · Kickstarter campaign draft · October 13, 2026</div>
+  <h1>Kickstarter campaign for UAply</h1>
+  <p class="muted">Ready to paste. Items in [brackets] are placeholders for facts only you have.</p>
+</header>
+
+<div class="note"><b>You do these steps yourself:</b> creating the Kickstarter account, choosing a password, identity verification, bank details, and pressing Submit. I can't do them. After you sign in I can help fill the text boxes in the built-in browser.</div>
+
+<section>
+  <h2>Page text</h2>
+  <div class="box" id="c-title">
+    <div class="row"><h3>Title (60 characters max)</h3><button data-copy="c-title-t">Copy</button></div>
+    <p id="c-title-t">UAply: job hunting for everyone, one swipe at a time</p>
+  </div>
+  <div class="box" style="margin-top:12px">
+    <div class="row"><h3>Short description</h3><button data-copy="c-sub">Copy</button></div>
+    <p id="c-sub">Swipe right to save a job and apply in one tap. For students, interns, career changers and anyone job hunting. Built in Philadelphia.</p>
+  </div>
+  <div class="box" style="margin-top:12px">
+    <div class="row"><h3>Story</h3><button data-copy="c-story">Copy</button></div>
+    <div id="c-story">
+      <p><b>UAply is for everybody.</b> Students, interns, recent graduates, career changers, people between jobs, people who want something better, and anyone who wants to use it. No school email, no resume polish, no special status needed.</p>
+      <p>Applying for jobs is slow. Hours of tabs, forms and copy and paste, for an answer that may never come.</p>
+      <p>UAply turns job hunting into one gesture. Swipe right on a posting you want, and UAply saves it and starts your application. Swipe left and it is gone.</p>
+      <p><b>What works today:</b> real job postings pulled from public employer feeds, swipe to save, and application delivery to recruiters. [Add your current user count and one real quote from a tester.]</p>
+      <p><b>Why Kickstarter:</b> we are a small team in [Philadelphia] building for every job seeker. Your support pays for hosting, a custom domain, more employer feeds and a mobile version.</p>
+      <p><b>Where the money goes:</b> [40%] servers and job feeds, [30%] mobile app, [20%] outreach to Philadelphia campuses, [10%] Kickstarter and payment fees.</p>
+    </div>
+  </div>
+  <div class="box" style="margin-top:12px">
+    <div class="row"><h3>Risks and challenges</h3><button data-copy="c-risk">Copy</button></div>
+    <div id="c-risk">
+      <p>UAply is a small project. Job postings come from public employer feeds, so coverage depends on what employers publish. Sending applications on a user's behalf must follow each employer's rules and our privacy commitments. If the funding goal is not reached, nothing is charged and nothing is built from this campaign. We will post an update at least every week.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Goal and rewards</h2>
+  <p class="muted">Kickstarter is all-or-nothing. A small goal is easier to reach. Suggested: <b>$1,500 for 25 days</b>.</p>
+  <div class="tiers">
+    <div class="box"><div class="price">$3</div><h3>Supporter</h3><p>Thank-you update and your name on the supporters page.</p></div>
+    <div class="box"><div class="price">$12</div><h3>Early access</h3><p>Early access to new features before public release.</p></div>
+    <div class="box"><div class="price">$30</div><h3>Lifetime Pro</h3><p>Lifetime access to premium features once they launch.</p></div>
+    <div class="box"><div class="price">$150</div><h3>Campus partner</h3><p>Your school club or company listed as a partner, plus a feature request.</p></div>
+  </div>
+  <p class="muted" style="margin-top:8px">Only promise rewards you can deliver. Premium features don't exist yet, so word them as planned.</p>
+</section>
+
+<section>
+  <h2>Video script (about 75 seconds)</h2>
+  <div class="box scroll">
+    <table>
+      <thead><tr><th>Time</th><th>On screen</th><th>Say</th></tr></thead>
+      <tbody>
+      <tr><td>0–8s</td><td>Messy job-site tabs, then a tired face</td><td>"Applying for jobs takes hours."</td></tr>
+      <tr><td>8–20s</td><td>Open UAply, first card</td><td>"This is UAply. Every card is a real job."</td></tr>
+      <tr><td>20–40s</td><td>Swipe right, application starts; swipe left</td><td>"Swipe right to apply. Swipe left to skip."</td></tr>
+      <tr><td>40–55s</td><td>Campus footage or founder on camera</td><td>"We built UAply in Philadelphia for everyone who is looking for work: students, interns, career changers, anyone."</td></tr>
+      <tr><td>55–75s</td><td>Rewards screen, URL</td><td>"Back us and help bring UAply to everyone."</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>Launch checklist</h2>
+  <div class="box">
+    <ol>
+      <li><span class="tag">You</span> Read kickstarter.com/rules and confirm you qualify.</li>
+      <li><span class="tag">You</span> Create the account and verify your email.</li>
+      <li><span class="tag">Together</span> Paste this page text into the project editor.</li>
+      <li><span class="tag">You</span> Film the video and take 4–6 screenshots.</li>
+      <li><span class="tag">You</span> Complete identity and bank verification.</li>
+      <li><span class="tag">You</span> Submit for review, then launch the prelaunch page.</li>
+      <li><span class="tag">Together</span> Build a list of at least [100] people before the live launch.</li>
+    </ol>
+  </div>
+</section>
+</main>
+<script>
+document.querySelectorAll('button[data-copy]').forEach(function(b){
+  b.addEventListener('click',function(){
+    var el=document.getElementById(b.getAttribute('data-copy'));
+    var done=function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)};
+    var fallback=function(){var r=document.createRange();r.selectNodeContents(el);var s=getSelection();s.removeAllRanges();s.addRange(r);b.textContent='Selected'};
+    try{navigator.clipboard.writeText(el.innerText).then(done,fallback)}catch(e){fallback()}
+  });
+});
+</script>

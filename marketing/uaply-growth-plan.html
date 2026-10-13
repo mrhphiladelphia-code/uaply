@@ -1,0 +1,156 @@
+<title>UAply Growth Plan</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Public+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: single readable column; summary stats first, then channel, funding and ads tables, then a 14-day timeline. */
+:root{
+  --bg:#f6f7f4; --surface:#ffffff; --fg:#17201b; --muted:#5b665f; --line:#dde2dc;
+  --accent:#0b7a53; --accent-soft:#dff2ea; --warn:#b4540a; --warn-soft:#fbeadb;
+  --display:"Bricolage Grotesque","Trebuchet MS",sans-serif; --body:"Public Sans",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1613; --surface:#18221d; --fg:#e8eee9; --muted:#9aa89f; --line:#2b3932;
+  --accent:#4cc28f; --accent-soft:#17352a; --warn:#f0a15e; --warn-soft:#3a2614; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1613; --surface:#18221d; --fg:#e8eee9; --muted:#9aa89f; --line:#2b3932;
+  --accent:#4cc28f; --accent-soft:#17352a; --warn:#f0a15e; --warn-soft:#3a2614; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:16px/1.55 var(--body);padding-inline:16px}
+main{max-width:860px;margin:0 auto;padding-block:32px 64px;display:flex;flex-direction:column;gap:40px}
+h1,h2{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.1}
+h1{font-size:clamp(2rem,6vw,3rem);font-weight:800}
+h2{font-size:1.5rem;font-weight:800;margin-bottom:12px}
+h3{font-size:1rem;margin:0 0 4px}
+p{margin:0 0 8px;max-width:65ch}
+.lede{color:var(--muted);font-size:1.1rem}
+.eyebrow{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
+.stat b{display:block;font:800 1.8rem var(--display);color:var(--accent);font-variant-numeric:tabular-nums}
+.stat span{color:var(--muted);font-size:.85rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+.card p{color:var(--muted);font-size:.92rem;margin:0}
+.note{background:var(--warn-soft);border:1px solid var(--warn);border-radius:10px;padding:14px;color:var(--fg)}
+.note b{color:var(--warn)}
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:.92rem}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+tr:last-child td{border-bottom:0}
+.tag{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:99px;padding:1px 9px;font-size:.78rem;font-weight:600}
+code{font:.85rem ui-monospace,Consolas,monospace;background:var(--accent-soft);padding:2px 6px;border-radius:5px;overflow-wrap:anywhere}
+.days{display:flex;flex-direction:column;gap:8px}
+.day{display:grid;grid-template-columns:84px 1fr;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.day b{font-family:var(--display);color:var(--accent)}
+@media (max-width:480px){.day{grid-template-columns:1fr;gap:2px}}
+ul{margin:0;padding-left:1.1rem} li{margin-bottom:4px}
+footer{color:var(--muted);font-size:.85rem}
+a{color:var(--accent)}
+</style>
+<main>
+<header>
+  <div class="eyebrow">UAply · Marketing and fundraising · for everyone · October 13, 2026</div>
+  <h1>Get 200–300 users in 14 days, then raise on the numbers</h1>
+  <p class="lede">Funders want proof before money. So the plan runs users first, grants and pitch competitions second, and ads last.</p>
+</header>
+
+<section class="stats" aria-label="Targets">
+  <div class="stat"><b>300</b><span>users in 14 days</span></div>
+  <div class="stat"><b>~2,000</b><span>real clicks needed at 15% click-to-user</span></div>
+  <div class="stat"><b>$0–$2</b><span>likely ad revenue at 300 users</span></div>
+  <div class="stat"><b>$5K–$60K</b><span>local student prizes to apply for</span></div>
+</section>
+
+<section>
+  <h2>Who UAply is for: everybody</h2>
+  <p>UAply is not a student-only tool. Every message, flyer and post should say that anyone looking for work can use it, with no school email or special status needed.</p>
+  <div class="grid">
+    <div class="card"><h3>Students and interns</h3><p>Campus flyers, career centers, clubs.</p></div>
+    <div class="card"><h3>Recent graduates</h3><p>Alumni networks, LinkedIn, graduate groups.</p></div>
+    <div class="card"><h3>Career changers</h3><p>r/jobs, r/careerguidance, local meetups.</p></div>
+    <div class="card"><h3>People between jobs</h3><p>Libraries, workforce centers, community groups, Facebook groups.</p></div>
+    <div class="card"><h3>Call center and hourly workers</h3><p>Fast apply on a phone matters most here. Shift-worker groups and local hiring events.</p></div>
+    <div class="card"><h3>Anyone who wants a better job</h3><p>Employed people browsing quietly. Short video demos on Instagram and TikTok.</p></div>
+  </div>
+  <p style="margin-top:12px;color:var(--muted);font-size:.9rem">Consultant note: broad is fine as a promise, but each channel needs one specific message for its audience. A flyer at a library says "Between jobs? Swipe, apply, done." A campus flyer says "Internship hunting? Swipe, apply, done." Same product, different first line.</p>
+</section>
+
+<section>
+  <h2>Where users come from</h2>
+  <div class="grid">
+    <div class="card"><span class="tag">Best</span><h3>Career centers and clubs</h3><p>Penn, Drexel, Temple, Villanova, La Salle, Saint Joseph's, CCP. Ask for a newsletter slot, a class announcement or a career-fair table. These students are job hunting now.</p></div>
+    <div class="card"><span class="tag">Best</span><h3>QR flyers and table days</h3><p>Libraries and student centers. One dynamic code per campus and placement so you can see which spot works.</p></div>
+    <div class="card"><h3>Reddit</h3><p>r/Philadelphia, r/UPenn, r/Drexel, r/Temple, r/internships, r/csMajors, r/SideProject. Each has its own self-promotion rule.</p></div>
+    <div class="card"><h3>Discord and GroupMe</h3><p>Campus servers and major-specific groups. Answer questions first, then share.</p></div>
+    <div class="card"><h3>Short demo videos</h3><p>The swipe-right-to-apply interaction shows well in 15 seconds on Instagram and TikTok.</p></div>
+    <div class="card"><h3>Product Hunt</h3><p>One launch day for credibility. It does not drive steady growth.</p></div>
+  </div>
+  <p style="margin-top:12px;color:var(--muted);font-size:.9rem">Comparable student startups: Freshlink handed out 750+ T-shirts and got 200+ student accounts in about ten weeks. Gradloop got about 150 signups in two weeks through career fairs and a fraternity. Both are self-reported.</p>
+</section>
+
+<section>
+  <h2>Daily auto-posting</h2>
+  <div class="note"><b>Recommendation: draft daily, submit by hand.</b> Reddit's spam systems judge account history and ban promotional bots. Its API now needs a separate agreement for commercial use, and scraping is prohibited. Product Hunt and Kickstarter are single launches, not daily feeds. Nothing is posting automatically yet.</div>
+  <div class="grid" style="margin-top:12px">
+    <div class="card"><h3>Reddit</h3><p>Follow 90/10: nine helpful contributions per promotional one. Read each subreddit's rules and karma minimums. You submit each post.</p></div>
+    <div class="card"><h3>Your own social accounts</h3><p>Safe to schedule through Metricool once you confirm which accounts. Drafts go to you for review first.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>QR codes</h2>
+  <ul>
+    <li>Use dynamic codes. Static codes cannot be tracked or edited after printing.</li>
+    <li>Tag each link, for example <code>?utm_source=flyer&amp;utm_medium=qr&amp;utm_campaign=penn_oct&amp;utm_content=library</code>. Keep values lowercase, since UTM is case-sensitive.</li>
+    <li>One line of promise next to the code: "Swipe right on a job. Apply in one tap." Print at least 1 inch square and test on three phones.</li>
+    <li>Count signups in the app, not scans.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Philadelphia funding</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>Source</th><th>What it offers</th><th>Who can apply</th></tr></thead>
+    <tbody>
+    <tr><td><a href="https://venturelab.upenn.edu/innovation-fund">Penn Wharton Innovation Fund</a></td><td>$1,000 Design and $2,000 Build awards</td><td>Currently enrolled Penn degree students</td></tr>
+    <tr><td><a href="https://www.fox.temple.edu/faculty-research/institutes-centers/innovation-entrepreneurship-institute/competitions/byobb">Temple Be Your Own Boss Bowl</a></td><td>Grand prize reported at $30K–$60K plus in-kind services; fall track for early ideas; 1810 Accelerator</td><td>Temple students, alumni, faculty, staff</td></tr>
+    <tr><td><a href="https://www.lebow.drexel.edu/faculty-research/centers-institutes/baiada-institute/pitch-competitions/innovation-tournament">Drexel Baiada Innovation Tournament</a></td><td>Four $5,000 awards with a year of incubation</td><td>Drexel students and alumni</td></tr>
+    <tr><td><a href="https://www.sep.benfranklin.org/event/road-to-lioncage-2026-pitch-competion/">Ben Franklin Road to LionCage</a></td><td>Six regional pitch events, March to October</td><td>All founders; check remaining dates</td></tr>
+    <tr><td>Philadelphia Regional Startup World Cup</td><td>City-run pitch; 2026 round was Sept 18 at Temple</td><td>Watch for the 2027 call</td></tr>
+    <tr><td>Dorm Room Fund, Osage University Partners, Center City Ventures</td><td>Student and pre-seed venture checks</td><td>Verify they are active</td></tr>
+    </tbody></table></div>
+  <p style="margin-top:8px;color:var(--muted);font-size:.9rem">Several pages were older than 2026. Confirm every amount and deadline on the official page.</p>
+</section>
+
+<section>
+  <h2>Kickstarter and ads</h2>
+  <div class="grid">
+    <div class="card"><h3>Kickstarter</h3><p>Weak fit for a free web app with no physical reward. Fees are about 5% plus 3–5% processing, charged only on success. It needs an audience before launch.</p></div>
+    <div class="card"><h3>AdSense</h3><p>For websites. Approval is much harder on a free subdomain, so get a custom domain first. At 300 users it earns cents, and ads hurt the swipe experience.</p></div>
+    <div class="card"><h3>AdMob</h3><p>For native mobile apps. UAply is a web app today.</p></div>
+    <div class="card"><h3>Better money later</h3><p>Paid employer listings, sponsored jobs or a premium tier. Review LEGAL-REVIEW.md first.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>Two-week schedule</h2>
+  <div class="days">
+    <div class="day"><b>Days 1–2</b><span>Landing page, signup counter, UTM scheme, dynamic QR codes, 15-second demo video.</span></div>
+    <div class="day"><b>Days 3–4</b><span>Email career centers and ten clubs. Join campus Discords and GroupMes. Help in Reddit threads without promoting.</span></div>
+    <div class="day"><b>Days 5–7</b><span>Print flyers, table at two campuses, first soft posts where allowed, daily demo clip.</span></div>
+    <div class="day"><b>Days 8–10</b><span>Follow up with partner clubs, share feature updates, prepare the Product Hunt page.</span></div>
+    <div class="day"><b>Days 11–14</b><span>Product Hunt launch, count users, write a one-page traction summary.</span></div>
+    <div class="day"><b>Day 15+</b><span>Apply to competitions and grants with the traction numbers.</span></div>
+  </div>
+</section>
+
+<section>
+  <h2>Needed from you</h2>
+  <ul>
+    <li>Which school are you or a teammate enrolled in? That picks the first grant.</li>
+    <li>Do you own a custom domain?</li>
+    <li>Which social accounts should posts be scheduled on?</li>
+    <li>Say "go" and the first week of drafts and flyer copy starts.</li>
+  </ul>
+</section>
+<footer>Source file: marketing/MARKETING-AND-FUNDRAISING.md in the UAply folder.</footer>
+</main>
