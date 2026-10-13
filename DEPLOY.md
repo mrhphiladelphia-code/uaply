@@ -17,12 +17,17 @@ dashboard; no code changes.
 Before real users: fill the blanks in `legal/`, and keep `delivery` in test mode until partner employers have agreed.
 
 ## 2. App Store and Google Play (Capacitor, in `mobile/`)
-The app opens the hosted dev site (`mobile/capacitor.config.json`, `server.url`). Update that URL if Render's name differs.
-- **Android (works on Windows):** install Node.js and Android Studio, then in `mobile/`: `npm install`,
-  `npm run add:android`, `npx cap open android`, and build a signed bundle. Google Play developer account: one-time fee.
-- **iPhone (needs a Mac):** on Windows use a cloud Mac build service (for example Codemagic). Apple Developer account:
-  yearly fee. Then `npm run add:ios` and upload through Xcode or the build service.
-- **Review risk:** Apple can reject apps that only wrap a website ("minimum functionality"). Plan native touches
-  before submitting: push notifications for interview reminders and new matches, offline screen, native share.
+The app opens the hosted dev site (`mobile/capacitor.config.json`, `server.url`). Update that URL if Render's name differs,
+then run `npx cap sync` in `mobile/`.
+- **Already done:** the Android project (`mobile/android`) and iPhone project (`mobile/ios`) exist, with the UAply icon,
+  splash screens and three phone features: interview reminders (local notifications), a vibration on each swipe, and
+  the share sheet. These only run inside the app; the website is unchanged.
+- **Android (works on Windows):** install Android Studio (accepting Google's Android SDK license), open `mobile/android`,
+  and build a signed app bundle. Google Play developer account: one-time fee. Keep the signing key safe: losing it
+  means you can't update the app.
+- **iPhone (needs a Mac):** on Windows use a cloud Mac build service (for example Codemagic) with `mobile/ios`.
+  Apple Developer account: yearly fee.
+- **Review risk:** Apple can reject apps that only wrap a website ("minimum functionality"). The reminders, vibration,
+  share sheet and offline screen help; push notifications for new matches (needs Apple and Firebase accounts) would help more.
 - **Store forms:** both stores need the privacy policy URL (`/legal/privacy.html`) and accurate privacy answers; account
   deletion already exists in the app (Profile, Account).
