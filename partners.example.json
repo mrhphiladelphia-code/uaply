@@ -1,5 +1,5 @@
 {
-  "_comment": "Partner employers: companies that gave Aply their openings AND agreed to receive applications by email. Copy this file to aply-partners.json (git-ignored) and put real employers there. An employer with no recorded consent is ignored. An employer with no contact address is link-out only. Never add a company that has not agreed. The entries below are placeholders.",
+  "_comment": "Partner employers: companies that gave UApply their openings AND agreed to receive applications by email. Copy this file to uapply-partners.json (git-ignored) and put real employers there. An employer with no recorded consent is ignored. An employer with no contact address is link-out only. Never add a company that has not agreed. The entries below are placeholders.",
   "employers": [
     {
       "name": "Example Partner Co",

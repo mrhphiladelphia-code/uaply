@@ -1,4 +1,4 @@
-# Aply
+# UApply
 
 A job-swiping app: swipe right to save a job and start an application, swipe left to pass.
 
@@ -26,7 +26,7 @@ python serve.py 8767 dev --api
 `--api` turns on the back end: real job postings from public employer feeds (`jobs_api.py`) and application delivery
 (`apply_api.py`). By default applications go to a simulated inbox at `/outbox` and nothing leaves your computer.
 
-To email real recruiters, copy `aply-config.example.json` to `aply-config.json` and add your own mail login. That file
+To email real recruiters, copy `uapply-config.example.json` to `uapply-config.json` and add your own mail login. That file
 and the `data/` folder are ignored by git and must never be committed.
 
 ## Make a change from a link (no setup)
@@ -34,8 +34,8 @@ and the `data/` folder are ignored by git and must never be committed.
 Open one of these, sign in to GitHub, edit the files in the browser, and commit. If you are not a collaborator, GitHub
 copies the project to your account and sends your change to the owner as a pull request.
 
-- Edit the sandbox: https://github.dev/saifsiddiqueep-sketch/aply/tree/sandbox
-- Edit dev: https://github.dev/saifsiddiqueep-sketch/aply/tree/dev
+- Edit the sandbox: https://github.dev/saifsiddiqueep-sketch/uapply/tree/sandbox
+- Edit dev: https://github.dev/saifsiddiqueep-sketch/uapply/tree/dev
 
 The browser editor cannot run the app or the checks. The pull request runs the checks for you, and the hosted page
 updates once the owner merges.
@@ -60,7 +60,7 @@ Real jobs and application sending need `serve.py --api` running somewhere.
 
 1. Create an empty repository on GitHub, then:
    ```bash
-   git remote add origin https://github.com/YOUR-NAME/aply.git
+   git remote add origin https://github.com/YOUR-NAME/uapply.git
    git push -u origin main dev sandbox
    ```
 2. Settings, Pages: set the source to **GitHub Actions**. Then Settings, Environments, `github-pages`: under

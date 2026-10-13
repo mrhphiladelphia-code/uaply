@@ -1,0 +1,16 @@
+{
+  "_comment": "Copy to uapply-config.json to change delivery. Without that file the sandbox and dev run in TEST mode: a swipe right delivers the application to the simulated inbox at /outbox and nothing leaves this computer. In live mode a swipe right emails the recruiter by itself after grace_seconds (Undo cancels it); set auto_send to false to show a Send button instead. Only postings that list a recruiting email can be emailed; the rest hand off to the employer's own page. test_recipient sends EVERY live application to that address instead of the recruiter, so you can test real email safely. Never commit real credentials.",
+  "delivery": "live",
+  "auto_send": true,
+  "grace_seconds": 5,
+  "test_recipient": "your-test-inbox@example.com",
+  "daily_limit": 20,
+  "smtp": {
+    "host": "smtp.gmail.com",
+    "port": 587,
+    "starttls": true,
+    "user": "the-sending-account@gmail.com",
+    "password": "a Gmail app password (not your normal password)",
+    "from_addr": "the-sending-account@gmail.com"
+  }
+}

@@ -10,15 +10,15 @@ How real job apps get postings, and what this does:
     the source, and that it is polled at most ~4 times a day. Both are respected below.
 
 LEGAL STATUS OF EACH SOURCE (checked October 2026; this is not legal advice, have a lawyer confirm before launch):
-  * Partner employers (aply-partners.json): AUTHORIZED. The employer gave us the posting and agreed to receive
-    applications. This is the only source whose applications Aply sends to a person.
-  * Remotive: its terms call using listings "to collect signups or email addresses" a breach, and Aply collects
+  * Partner employers (uapply-partners.json): AUTHORIZED. The employer gave us the posting and agreed to receive
+    applications. This is the only source whose applications UApply sends to a person.
+  * Remotive: its terms call using listings "to collect signups or email addresses" a breach, and UApply collects
     emails. Never enabled by default; do not enable without written permission.
   * Jobicy: must credit Jobicy and send applicants to the original job URL, so it is LINK-OUT ONLY.
   * The Muse: terms not found. Unverified; do not enable until verified in writing.
   * Greenhouse, Lever, Ashby public boards: meant for employers' careers pages; no terms found that cover third-party
     aggregation. Unverified, LINK-OUT ONLY.
-  Third-party feeds are OFF unless the owner lists them under "feeds" in aply-config.json. Jobs from a feed are never
+  Third-party feeds are OFF unless the owner lists them under "feeds" in uapply-config.json. Jobs from a feed are never
   emailed to anyone (the recruiter address is dropped); swiping right only opens the employer's own page.
 
 get_jobs() returns {"fetched_at", "sources", "jobs"} where each job already matches the shape the app expects.
@@ -35,7 +35,7 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-UA = "AplyDev/0.1 (local prototype)"
+UA = "UApplyDev/0.1 (local prototype)"
 DEFAULT_TTL = 30 * 60
 TTL = {"remotive": 6 * 3600,          # Remotive allows roughly 4 requests a day
        "jobicy": 3600}                # Jobicy asks for at most one sync pass an hour
@@ -279,7 +279,7 @@ def _fetch_source(src):
 
 def _cfg():
     try:
-        with open(os.path.join(ROOT, "aply-config.json"), encoding="utf-8") as f:
+        with open(os.path.join(ROOT, "uapply-config.json"), encoding="utf-8") as f:
             return json.load(f)
     except Exception:
         return {}
@@ -300,9 +300,9 @@ def _clean(v, n):
 
 
 def partner_jobs():
-    """Jobs from aply-partners.json (or the placeholder-only partners.example.json). Each employer must record how it
+    """Jobs from uapply-partners.json (or the placeholder-only partners.example.json). Each employer must record how it
     consented. An employer with a contact address receives applications directly; without one it is link-out only."""
-    path = next((os.path.join(ROOT, n) for n in ("aply-partners.json", "partners.example.json")
+    path = next((os.path.join(ROOT, n) for n in ("uapply-partners.json", "partners.example.json")
                  if os.path.exists(os.path.join(ROOT, n))), None)
     if not path:
         return []

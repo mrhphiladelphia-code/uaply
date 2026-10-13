@@ -41,7 +41,7 @@ var FEATURES={
      if(d.getElementById("stConfirm"))return;
      var card=d.querySelector(".card.top");if(!card)return;
      var role=card.querySelector("h2").textContent,co=card.querySelector(".chead p").textContent,pct=card.querySelector(".ring b").textContent,who="you";
-     try{var p=JSON.parse(w.localStorage.getItem(w.__aplyKey)).profile;if(p.custom&&p.name)who=p.name}catch(x){}
+     try{var p=JSON.parse(w.localStorage.getItem(w.__uapplyKey)).profile;if(p.custom&&p.name)who=p.name}catch(x){}
      var o=d.createElement("div");o.id="stConfirm";
      o.style.cssText="position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:16px;background:rgba(0,0,0,.45)";
      o.innerHTML='<div role="dialog" aria-modal="true" aria-label="Confirm application" style="background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:18px;padding:22px;max-width:380px;width:100%;box-shadow:var(--shadow)"><h2 style="margin:0 0 6px;font:800 20px var(--display)">Save '+co+' to Applied?</h2><p style="margin:0 0 16px;color:var(--muted)">'+role+' · '+pct+' match. This saves it to your list as '+who+'. Nothing is sent to the company.</p><div style="display:flex;gap:10px;justify-content:flex-end"><button class="btn ghost" id="stNo" type="button">Cancel</button><button class="btn" id="stYes" type="button">Save</button></div></div>';
@@ -108,11 +108,11 @@ var FEATURES={
    if(!tips||tips.hidden||w.matchMedia("(prefers-reduced-motion: reduce)").matches)return;
    setTimeout(function(){var c=d.querySelector(".card.top");if(c&&c.animate)c.animate([{transform:"translateX(0)"},{transform:"translateX(30px) rotate(1.6deg)"},{transform:"translateX(-30px) rotate(-1.6deg)"},{transform:"translateX(0)"}],{duration:1100,easing:"ease-in-out"})},700);
  }},
- nav:{name:"Bottom navigation",note:"Bottom bar with three dropdowns: Services (Jobs, Internships, Co-ops), Dashboard (Applied, Interview, Rejected), Profile (Settings, Preferences, Filters). Adds internship and co-op listings.",patch:function(s){return window.AplyNav.patch(s)},apply:function(w,host){window.AplyNav.apply(w,host)}},
- live:{name:"Real jobs",note:"Loads real, current postings from employers' public job boards (Greenhouse, Lever, Ashby) and Remotive through this server's back end, hides the made-up examples, and links each card to the original posting. Indeed and ZipRecruiter have no open API, so they are not included.",patch:function(s){return window.AplyLive.patch(s)},apply:function(w,host){return window.AplyLive.apply(w,host)}},
- kit:{name:"Apply assistant",note:"After a swipe right on a real posting: a ready-to-send note, Copy, an email draft (opens your mail app; you press send) and a button to the employer's application page. Aply cannot submit applications itself.",patch:function(s){return window.AplyLive.kit.patch(s)},apply:function(w,host){window.AplyLive.kit.apply(w,host)}},
- submit:{name:"Send applications",note:"Swipe right sends the application through this server: in test mode to a simulated recruiter inbox (nothing leaves this computer, see /outbox), in live mode by email to the recruiter after you review and press Send. Swipe left only records a pass; nothing is sent. Needs Bottom navigation, Real jobs and Apply assistant, which turn on with it.",apply:function(w,host){return window.AplyLive.submit.apply(w,host)}},
- profile:{name:"Application profile",note:"Profile gets what LinkedIn, Indeed, ZipRecruiter and Handshake collect for a fast, complete application: phone, resume link, LinkedIn and portfolio, school and major, work authorization and sponsorship, start date, opportunity types and a default note. Shows a readiness score and checks your links. Needs Bottom navigation.",patch:function(s){return window.AplyProfile.patch(s)},apply:function(w,host){window.AplyProfile.apply(w,host)}},
+ nav:{name:"Bottom navigation",note:"Bottom bar with three dropdowns: Services (Jobs, Internships, Co-ops), Dashboard (Applied, Interview, Rejected), Profile (Settings, Preferences, Filters). Adds internship and co-op listings.",patch:function(s){return window.UApplyNav.patch(s)},apply:function(w,host){window.UApplyNav.apply(w,host)}},
+ live:{name:"Real jobs",note:"Loads real, current postings from employers' public job boards (Greenhouse, Lever, Ashby) and Remotive through this server's back end, hides the made-up examples, and links each card to the original posting. Indeed and ZipRecruiter have no open API, so they are not included.",patch:function(s){return window.UApplyLive.patch(s)},apply:function(w,host){return window.UApplyLive.apply(w,host)}},
+ kit:{name:"Apply assistant",note:"After a swipe right on a real posting: a ready-to-send note, Copy, an email draft (opens your mail app; you press send) and a button to the employer's application page. UApply cannot submit applications itself.",patch:function(s){return window.UApplyLive.kit.patch(s)},apply:function(w,host){window.UApplyLive.kit.apply(w,host)}},
+ submit:{name:"Send applications",note:"Swipe right sends the application through this server: in test mode to a simulated recruiter inbox (nothing leaves this computer, see /outbox), in live mode by email to the recruiter after you review and press Send. Swipe left only records a pass; nothing is sent. Needs Bottom navigation, Real jobs and Apply assistant, which turn on with it.",apply:function(w,host){return window.UApplyLive.submit.apply(w,host)}},
+ profile:{name:"Application profile",note:"Profile gets what LinkedIn, Indeed, ZipRecruiter and Handshake collect for a fast, complete application: phone, resume link, LinkedIn and portfolio, school and major, work authorization and sponsorship, start date, opportunity types and a default note. Shows a readiness score and checks your links. Needs Bottom navigation.",patch:function(s){return window.UApplyProfile.patch(s)},apply:function(w,host){window.UApplyProfile.apply(w,host)}},
  anim:{name:"Card rise motion",note:"The next card eases up into place after each swipe (skipped when reduced motion is on).",patch:function(s){return once(s,"</style>",CSS_RISE+"</style>")}},
  a11y:{name:"Screen reader announce",note:"A hidden live region announces the new top job after each swipe.",apply:function(w){
    var d=w.document,lr=d.createElement("div");
@@ -121,7 +121,7 @@ var FEATURES={
    new w.MutationObserver(say).observe(d.getElementById("deck"),{childList:true});say();
  }},
  backend:{name:"Mock back end",note:"Pretends to be a server: each apply/pass/withdraw and profile save is sent as an API call with latency, shown in the log below. Nothing leaves your browser.",apply:function(w,host){
-   var K=w.__aplyKey,logEl=host&&host.getElementById("log");if(!logEl)return;
+   var K=w.__uapplyKey,logEl=host&&host.getElementById("log");if(!logEl)return;
    var proto=w.Storage.prototype,orig=proto.setItem,prev={},prevProfile="";
    function snap(){try{var d=JSON.parse(w.localStorage.getItem(K));prev={};Object.keys(d.decisions||{}).forEach(function(k){prev[k]=d.decisions[k].s});prevProfile=JSON.stringify(d.profile||{})}catch(e){prev={};prevProfile=""}}
    function line(m){logEl.classList.add("on");var p=host.createElement("div");p.innerHTML=m;logEl.appendChild(p);logEl.scrollTop=logEl.scrollHeight}
@@ -149,7 +149,7 @@ var ORDER=["easy","confirm","axis","caps","smart","top2","nav","profile","live",
 function build(on,key){
   return fetch("prod-index.html",{cache:"no-store"}).then(function(r){return r.text()}).then(function(src){
     var err="";
-    window.__aplyBuildKey=key;
+    window.__uapplyBuildKey=key;
     try{src=once(src,'var KEY="hireswipe.v1";','var KEY="'+key+'";')}catch(e){err+="Storage key: "+e.message+". "}
     ORDER.forEach(function(k){if(on[k]&&FEATURES[k].patch){try{src=FEATURES[k].patch(src)}catch(e){err+=FEATURES[k].name+": "+e.message+". "}}});
     return {src:src,err:err};
@@ -161,12 +161,12 @@ function run(frame,on,key,done){
   if(on.profile)on=Object.assign({},on,{nav:true});                     /* the profile fields live in the navigation's Profile sections */
   return build(on,key).then(function(b){
     frame.onload=function(){
-      var w=frame.contentWindow;w.__aplyKey=key;
+      var w=frame.contentWindow;w.__uapplyKey=key;
       ORDER.forEach(function(k){if(on[k]&&FEATURES[k].apply){try{FEATURES[k].apply(w,document)}catch(e){b.err+=FEATURES[k].name+": "+e.message+". "}}});
       if(done)done(b.err);
     };
     frame.srcdoc=b.src;
   });
 }
-window.AplyEnv={FEATURES:FEATURES,ORDER:ORDER,run:run};
+window.UApplyEnv={FEATURES:FEATURES,ORDER:ORDER,run:run};
 })();

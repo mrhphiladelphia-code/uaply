@@ -22,8 +22,8 @@ for a in rest:
 HERE = os.path.dirname(os.path.abspath(__file__))
 if api:
     # the sandbox and dev pages load these shared files and a copy of the production page; no command-line aliases needed
-    for url, rel in (("/aply-envs.js", "shared/aply-envs.js"), ("/aply-nav.js", "shared/aply-nav.js"),
-                     ("/aply-live.js", "shared/aply-live.js"), ("/aply-profile.js", "shared/aply-profile.js"),
+    for url, rel in (("/uapply-envs.js", "shared/uapply-envs.js"), ("/uapply-nav.js", "shared/uapply-nav.js"),
+                     ("/uapply-live.js", "shared/uapply-live.js"), ("/uapply-profile.js", "shared/uapply-profile.js"),
                      ("/prod-index.html", "prod/index.html")):
         alias.setdefault(url, os.path.join(HERE, rel))
     import jobs_api, apply_api

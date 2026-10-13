@@ -32,7 +32,7 @@ const py = process.platform === "win32" ? "python" : "python3";
 });
 
 console.log("JSON files");
-["aply-config.example.json", ".claude/launch.json"].forEach((f) => {
+["uapply-config.example.json", ".claude/launch.json"].forEach((f) => {
   try { JSON.parse(fs.readFileSync(f, "utf8")); ok(f); } catch (e) { bad(f + ": " + e.message); }
 });
 
@@ -49,9 +49,9 @@ try {
 console.log("Every experiment still applies to the production page");
 try {
   global.window = {}; global.localStorage = { getItem() { return null; } };
-  ["shared/aply-nav.js", "shared/aply-live.js", "shared/aply-profile.js"].forEach((f) => new Function("window", "localStorage", fs.readFileSync(f, "utf8"))(window, localStorage));
+  ["shared/uapply-nav.js", "shared/uapply-live.js", "shared/uapply-profile.js"].forEach((f) => new Function("window", "localStorage", fs.readFileSync(f, "utf8"))(window, localStorage));
   let src = fs.readFileSync("prod/index.html", "utf8");
-  src = window.AplyNav.patch(src); src = window.AplyProfile.patch(src); src = window.AplyLive.patch(src); src = window.AplyLive.kit.patch(src);
+  src = window.UApplyNav.patch(src); src = window.UApplyProfile.patch(src); src = window.UApplyLive.patch(src); src = window.UApplyLive.kit.patch(src);
   new Function(/<script(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/.exec(src)[1]);
   ok("patched app assembles and parses");
 } catch (e) { bad("patching the production page failed: " + e.message); }

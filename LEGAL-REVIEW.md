@@ -1,12 +1,12 @@
-# Aply legal risk review (October 12, 2026)
+# UApply legal risk review (October 12, 2026)
 
-**This is not legal advice and I am not an attorney.** It is a risk audit and a set of drafts prepared by an AI assistant. Nobody can promise "no legal risk." Have a licensed attorney (ideally one who handles app, privacy and employment law) review everything here before Aply is public or submitted to an app store. Facts below were checked on the web in October 2026; several came from law-firm blogs and secondary sources, and each is marked with how solid it is.
+**This is not legal advice and I am not an attorney.** It is a risk audit and a set of drafts prepared by an AI assistant. Nobody can promise "no legal risk." Have a licensed attorney (ideally one who handles app, privacy and employment law) review everything here before UApply is public or submitted to an app store. Facts below were checked on the web in October 2026; several came from law-firm blogs and secondary sources, and each is marked with how solid it is.
 
 ## 1. Where the jobs come from (the contract question)
 
 | Source | What its terms say | Confidence | Decision |
 |---|---|---|---|
-| Remotive | Using its listings "to collect signups or email addresses constitutes a breach"; must link back and name Remotive; asks that jobs not go to third-party sites; about 4 requests a day | From Remotive's own API page | **Off.** Aply collects emails, so using it would breach the terms. Needs written permission. |
+| Remotive | Using its listings "to collect signups or email addresses constitutes a breach"; must link back and name Remotive; asks that jobs not go to third-party sites; about 4 requests a day | From Remotive's own API page | **Off.** UApply collects emails, so using it would breach the terms. Needs written permission. |
 | Jobicy | Credit Jobicy; "all application buttons" must go to the original job URL | From Jobicy's own page | **Link-out only**, never auto-submitted, and off by default |
 | The Muse | Terms not found | Could not verify | **Off** until verified in writing |
 | Greenhouse, Lever, Ashby public boards | Public feeds for employers' careers pages; no terms found covering third-party aggregation | Could not verify | **Link-out only** and **off by default** |
@@ -17,7 +17,7 @@
 
 ## 2. Sending applications
 
-- **Emailing a company that never asked** can be unwelcome, can damage your sender reputation, and may implicate the CAN-SPAM Act (commercial email rules) depending on content. So Aply emails **only** partner employers who opted in. For every other job the swipe sends the person to the employer's own page.
+- **Emailing a company that never asked** can be unwelcome, can damage your sender reputation, and may implicate the CAN-SPAM Act (commercial email rules) depending on content. So UApply emails **only** partner employers who opted in. For every other job the swipe sends the person to the employer's own page.
 - **Submitting into an employer's applicant tracking system** needs a key issued by that employer (for example Greenhouse's job board application endpoint). Not available to third parties, so not done.
 - **Server safeguards built:** the server decides who may receive an email (never the browser), strict address checks, one application per person per job, a daily cap, same-site requests only, and no cover note or message written for the recruiter.
 - **First-use consent:** before the first application the app explains what is sent and to whom, and records agreement to the Terms and Privacy Policy.
@@ -32,12 +32,12 @@
 
 ## 4. AI and automated hiring rules
 
-Current as of the sources found (verify each; they change often): New York City Local Law 144 (bias audit and candidate notice for employers using automated tools); Illinois' amended Human Rights Act (in effect January 1, 2026); California Civil Rights Council rules (October 1, 2025) and CCPA automated-decision rules (compliance dates 2026 and 2027); Colorado's replacement law effective January 1, 2027. These bind **employers** that use automated tools to evaluate candidates. Aply today uses a fixed scoring formula, not machine learning, and does not screen or reject anyone. The disclosure page says exactly that. **If you later add machine learning, resume ranking for employers, or auto-rejection, the analysis changes and you will likely need bias audits and notices.** Also keep the page true: it states the score weights and the 45% cap.
+Current as of the sources found (verify each; they change often): New York City Local Law 144 (bias audit and candidate notice for employers using automated tools); Illinois' amended Human Rights Act (in effect January 1, 2026); California Civil Rights Council rules (October 1, 2025) and CCPA automated-decision rules (compliance dates 2026 and 2027); Colorado's replacement law effective January 1, 2027. These bind **employers** that use automated tools to evaluate candidates. UApply today uses a fixed scoring formula, not machine learning, and does not screen or reject anyone. The disclosure page says exactly that. **If you later add machine learning, resume ranking for employers, or auto-rejection, the analysis changes and you will likely need bias audits and notices.** Also keep the page true: it states the score weights and the 45% cap.
 
 ## 5. App Store and Google Play
 
 - **Both stores** need a public privacy policy URL, and accurate privacy answers (Apple's App Privacy details, Google's Data safety form).
-- **Account deletion:** if the app lets people create accounts, both stores require deletion inside the app (and, for Google, a web link). Aply has no accounts yet; building sign-in later triggers this.
+- **Account deletion:** if the app lets people create accounts, both stores require deletion inside the app (and, for Google, a web link). UApply has no accounts yet; building sign-in later triggers this.
 - **Sign in with Apple:** needed if you offer other third-party sign-in (Google) in an iPhone app, unless an exception applies.
 - **Payments:** subscriptions inside apps normally must use the store's billing (a commission of about 15 to 30%).
 - **Apple's "minimum functionality" rule:** a thin wrapper around a website is a common reason for rejection. Plan a real app.
@@ -47,7 +47,7 @@ Current as of the sources found (verify each; they change often): New York City 
 
 - Terms of The Muse, Greenhouse, Lever and Ashby (see section 1).
 - Current text of Apple and Google policies.
-- Which state laws apply to your business, your trademark availability for "Aply", and whether your applications qualify for any special treatment.
+- Which state laws apply to your business, your trademark availability for "UApply", and whether your applications qualify for any special treatment.
 - Whether the "AI and matching" laws apply to you as a tool provider and not only to employers.
 
 ## 7. Before you publish
@@ -56,10 +56,21 @@ Current as of the sources found (verify each; they change often): New York City 
 2. Get a real contact and privacy email, and register a DMCA agent with the U.S. Copyright Office.
 3. Sign partner agreements (or at least written consent) with every employer that will receive applications.
 4. Decide whether to get written permission or a license for any third-party job feed.
-5. Have an attorney review the Terms, Privacy Policy, AI page and your partner agreement.
+5. Have an attorney review the Terms, Privacy Policy, AI page and your partner agreement, and clear the name (section 8).
 6. Add in-app deletion before launching accounts.
 
-## 8. Questions for your attorney
+## 8. The name "UApply" (checked October 12, 2026)
+
+The app was renamed from "Aply" to "UApply". A web search found that **the name is not clear**:
+
+- A trademark record exists for **UAPPLY.COM, Inc.**, covering online links to education applications (Justia listing; I could not confirm whether it is still active).
+- **McGill University** runs a graduate admissions system named uApply.
+- An iPhone app named **UApply** already exists in the App Store (it appears to be a study-abroad consultancy app).
+- **uApply.ai** is a career-technology company that automates job applications with AI. This is the same field as this app and is the likeliest source of a trademark or app-store naming dispute.
+
+Apple and Google reject or remove apps over confusingly similar names, and a trademark owner can demand a change after launch. **Have an attorney run a proper clearance search (USPTO and common-law uses) and give an opinion before you spend money on branding, a domain or a store listing.** If it is not clear, picking a different name now is far cheaper than rebranding later. The rename is mechanical and was done in one pass, so it can be repeated.
+
+## 9. Questions for your attorney
 
 - Which state privacy laws apply to us, and do we need to register as a business or data broker anywhere?
 - Is our "applies on your behalf" flow acceptable under the employers' terms and under agency law (are we the applicant's agent)?

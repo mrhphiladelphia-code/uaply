@@ -3,7 +3,7 @@
 Swipe right  -> POST /api/apply    builds an application and delivers it.
 Swipe left   -> POST /api/decision just records that the job was passed on. Nothing is sent to anyone.
 
-Delivery modes (aply-config.json, key "delivery"):
+Delivery modes (uapply-config.json, key "delivery"):
   "test"  (default) the application is written to a simulated recruiter inbox on this computer (/outbox).
                     Nothing leaves the machine, so the flow can be tested with any profile.
   "live"            if the posting lists a recruiting email AND SMTP is configured, the application is emailed to that
@@ -28,7 +28,7 @@ from email.message import EmailMessage
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(ROOT, "data")
-CONFIG_PATH = os.path.join(ROOT, "aply-config.json")
+CONFIG_PATH = os.path.join(ROOT, "uapply-config.json")
 import jobs_api
 
 EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")   # strict: one plain address, no lists or names
@@ -162,7 +162,7 @@ def _detail_text(c, note=""):
 
 def _application_text(c, job, note=""):
     """The application as the recruiter reads it: the applicant's details. A cover note is included only if one was written."""
-    body = note.strip() or "%s applied for the %s position at %s through Aply." % (c["name"], job["role"], job["co"])
+    body = note.strip() or "%s applied for the %s position at %s through UApply." % (c["name"], job["role"], job["co"])
     return body + _detail_text(c, note)
 
 
@@ -203,7 +203,7 @@ def _send_email(cfg, to, cand, job, note, original=""):
     test = _redirect(cfg) == to
     msg["Subject"] = "%sApplication: %s - %s" % ("[TEST] " if test else "", job["role"], cand["name"])
     extra = ("\nTest redirect: this would have gone to %s.\n" % (original or "the company's application page")) if test else ""
-    msg.set_content("%s\n\n--\nSent through Aply on behalf of %s <%s>.\nPosting: %s\n%s" % (_application_text(cand, job, note), cand["name"], cand["email"], job["url"], extra))
+    msg.set_content("%s\n\n--\nSent through UApply on behalf of %s <%s>.\nPosting: %s\n%s" % (_application_text(cand, job, note), cand["name"], cand["email"], job["url"], extra))
     with smtplib.SMTP(s["host"], int(s.get("port", 587)), timeout=20) as srv:
         if s.get("starttls", True):
             srv.starttls()
@@ -244,7 +244,7 @@ def submit(p):
         rec = {"id": uuid.uuid4().hex[:12], "at": int(time.time()), "mode": mode, "job": job, "candidate": cand,
                "note": note, "match": int(p.get("match") or 0), "to": "", "simulated": False, "status": ""}
         if policy == "link" or (policy == "unknown" and mode == "live"):
-            # a third-party listing, or an example in live mode: Aply never sends an application to anyone here.
+            # a third-party listing, or an example in live mode: UApply never sends an application to anyone here.
             # The person is pointed to the employer's own application page instead.
             rec["status"] = "handoff"
             APPS.append(rec)
@@ -335,7 +335,7 @@ def outbox_html():
                 e(c["name"]), e(c["email"]), e(c["title"] or "candidate"), c["years"], a["match"], e(j["url"]), e(_application_text(c, j, a["note"]))))
     body = "".join(rows) or "<p class='m'>No applications yet. Swipe right on a job in the sandbox or dev app.</p>"
     return ("""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Aply test inbox</title><style>
+<title>UApply test inbox</title><style>
 :root{--bg:#FDF0F2;--surface:#FFFFFF;--ink:#2A1218;--muted:#7B5560;--line:#F3DADF;--accent:#C92A55}
 @media (prefers-color-scheme: dark){:root{--bg:#190B10;--surface:#26131A;--ink:#FBE9EE;--muted:#C79BA6;--line:#40222B;--accent:#FF7A98}}
 body{margin:0;padding:16px;background:var(--bg);color:var(--ink);font:15px/1.45 'DM Sans','Segoe UI',system-ui,sans-serif}
@@ -346,6 +346,6 @@ article{background:var(--surface);border:1px solid var(--line);border-radius:14p
 header{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}header time{margin-left:auto;color:var(--muted);font-size:13px}
 .b{font:700 11px ui-monospace,Menlo,monospace;padding:2px 7px;border-radius:6px;background:var(--accent);color:#fff}
 pre{white-space:pre-wrap;margin:8px 0 0;font:inherit;background:var(--bg);border-radius:10px;padding:10px}a{color:var(--accent)}
-</style></head><body><main><h1>Aply test inbox</h1><p class="m">Simulated recruiter inbox. In test mode nothing leaves this computer.</p>
+</style></head><body><main><h1>UApply test inbox</h1><p class="m">Simulated recruiter inbox. In test mode nothing leaves this computer.</p>
 <div class="stats"><div><b>%d</b><small>Swipes right</small></div><div><b>%d</b><small>Swipes left</small></div><div><b>%d</b><small>Applications</small></div><div><b>%d</b><small>Testers</small></div></div>
 %s</main></body></html>""" % (st["right"], st["left"], st["applications"], st["sessions"], body)).encode("utf-8")
