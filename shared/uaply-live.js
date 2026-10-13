@@ -25,7 +25,7 @@ function patch(s){
   var extra=cached.length?","+JSON.stringify(cached).slice(1,-1).replace(/<\//g,"<\\/"):"";
   s=once(s,'regional cookbooks."}','regional cookbooks."}'+extra);
   s=once(s,"var JOB_BY_ID={};JOBS.forEach(function(j){JOB_BY_ID[j.id]=j});",
-    "var JOB_BY_ID={};JOBS.forEach(function(j){JOB_BY_ID[j.id]=j});\nwindow.__uaplyJobs={add:function(list){var n=0;list.forEach(function(j){if(!JOB_BY_ID[j.id]){JOBS.push(j);JOB_BY_ID[j.id]=j;n++}});renderAll();return n}};\n"+
+    "var JOB_BY_ID={};JOBS.forEach(function(j){JOB_BY_ID[j.id]=j});\nwindow.__uaplyJobs={add:function(list){var n=0;list.forEach(function(j){if(!JOB_BY_ID[j.id]){JOBS.push(j);JOB_BY_ID[j.id]=j;n++}else{var o=JOB_BY_ID[j.id];if(j.posted)o.posted=j.posted;if(j.perks)o.perks=j.perks;if(j.type)o.type=j.type;o.comm=!!j.comm}});renderAll();return n}};\n"+
     /* Links open as real anchor clicks (a user gesture), which popup blockers accept; window.open can be refused silently. */
     "window.__uaplyOpen=function(u){if(!/^https:\\/\\//.test(u||\"\"))return;var a=document.createElement(\"a\");a.href=u;a.target=\"_blank\";a.rel=\"noopener noreferrer\";document.body.appendChild(a);a.click();a.remove()};");
   s=once(s,"return !S.decisions[j.id]&&","return !S.decisions[j.id]&&(j.live||!window.__uaplyHideSamples)&&");
@@ -59,7 +59,8 @@ function apply(w,host){
     if(fresh.length>=5)w.__uaplyHideSamples=true;      /* set before adding, so the deck renders once */
     var added=w.__uaplyJobs.add(fresh);
     var all=readCache(),ids={};all.forEach(function(j){ids[j.id]=1});
-    fresh.forEach(function(j){if(!ids[j.id])all.push(j)});
+    var byId={};fresh.forEach(function(j){byId[j.id]=j;if(!ids[j.id])all.push(j)});
+    all.forEach(function(c){var f=byId[c.id];if(f){c.posted=f.posted;c.perks=f.perks;c.type=f.type;c.comm=!!f.comm}});   /* keep saved copies current */
     writeCache(all);
     var src=Object.keys(data.sources||{}).map(function(k){return k+": "+data.sources[k]}).join(" · ");
     say("Real postings: "+fresh.length+" loaded ("+added+" new). "+src);
@@ -145,17 +146,19 @@ function kitApply(w,host){
         (submitOn&&!profileOk?'<button type="button" class="btn" id="kitProfile">Open Profile</button>':'')+
         '<button type="button" class="btn'+(submitOn&&ask?' ghost':'')+'" id="kitOpen">Open application page ↗</button>'+
         '<button type="button" class="btn ghost" id="kitCopy">Copy note</button>'+
+        (w.__uaplyAnswers?'<button type="button" class="btn ghost" id="kitAnswers">Copy my answers</button>':'')+
         '<button type="button" class="btn ghost" id="kitMail">Email draft</button>'+
         (submitOn&&!live?'<a class="linkbtn" href="/outbox" target="_blank" rel="noopener noreferrer" style="align-self:center">View test inbox ↗</a>':'')+
       '</div>'+
       '<div style="display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap"><button type="button" class="linkbtn" id="kitUndo">Undo, do not save</button><button type="button" class="btn ghost" id="kitDone">Done</button></div></div>';
     d.body.appendChild(o);
     var ta=d.getElementById("kitText"),statusEl=d.getElementById("kitStatus"),undoBtn=d.getElementById("kitUndo");
-    ta.value=note(job,m,p);
-    var cancelled=false;
-    function close(){o.remove()}
+    ta.value=(w.__uaplyAutoMsg&&w.__uaplyAutoMsg()&&w.__uaplyMessage)?w.__uaplyMessage(job,m,p):note(job,m,p);
+    var cancelled=false,tm=0;
+    function close(){clearInterval(tm);o.remove()}
     function setStatus(t,bad){statusEl.textContent=t;statusEl.style.color=bad?"var(--no)":"var(--yes)"}
     function send(){
+      clearInterval(tm);
       var sendBtn=d.getElementById("kitSend");if(sendBtn)sendBtn.disabled=true;
       setStatus("Sending…");
       post("/api/apply",{consent:true,confirm_real:live,match:m.pct,note:ta.value,
@@ -172,6 +175,9 @@ function kitApply(w,host){
         else if(j.status==="handoff")setStatus("This employer takes applications on its own page. Use the button below.");
         else if(j.status==="failed"){setStatus(j.error||"The email could not be sent.",true);if(sendBtn)sendBtn.disabled=false;return}
         else setStatus("Done.");
+        var rc=j.receipt,au=w.__uaplyAuth?w.__uaplyAuth():null;
+        if(rc)statusEl.textContent+=" "+({sent:"A receipt was emailed to "+rc.to+".",delivered_test:"Your receipt for "+rc.to+" is in the test inbox.",not_configured:"No receipt was emailed: email sending is not set up yet.",failed:"The receipt email to "+rc.to+" could not be sent."}[rc.status]||"");
+        else if(au&&au.up&&!au.user)statusEl.textContent+=" Sign in (top right) to get an email receipt.";
         if(j.status!=="handoff")undoBtn.hidden=true;
         if(sendBtn&&(j.status==="sent"||j.status==="delivered_test"||j.status==="duplicate"))sendBtn.hidden=true;
       }).catch(function(){setStatus("Could not reach the server.",true);if(sendBtn)sendBtn.disabled=false});
@@ -181,6 +187,12 @@ function kitApply(w,host){
     if(pb)pb.onclick=function(){close();var b=d.getElementById("nb-prof");if(b){b.click();var it=d.querySelector('.nwrap[data-k=prof] .nitem[data-v=settings]');if(it)it.click()}};
     d.getElementById("kitOpen").onclick=function(){if(w.__uaplyOpen)w.__uaplyOpen(job.url)};
     d.getElementById("kitCopy").onclick=function(){copy(ta.value,this)};
+    var ansBtn=d.getElementById("kitAnswers");
+    if(ansBtn)ansBtn.onclick=function(){
+      var b=this,t=w.__uaplyAnswers();
+      function done(){b.textContent="Copied";setTimeout(function(){b.textContent="Copy my answers"},1500)}
+      if(w.navigator.clipboard&&w.navigator.clipboard.writeText)w.navigator.clipboard.writeText(t).then(done,function(){setStatus("Copy was blocked by the browser.",true)});else setStatus("Copy is not available here.",true);
+    };
     d.getElementById("kitMail").onclick=function(){
       var a=d.createElement("a");a.href="mailto:"+encodeURIComponent(contact).replace("%40","@")+"?subject="+encodeURIComponent("Application: "+job.role)+"&body="+encodeURIComponent(ta.value);
       d.body.appendChild(a);a.click();a.remove();
@@ -244,9 +256,17 @@ function kitApply(w,host){
       toast("Add your name and email in Profile so recruiters can reply.","Open Profile",openProfile,9000);return;
     }
     if(live&&!auto){sheet(job,m,p,undo,S,save);return}           /* auto_send is off in the config: show the review screen */
+    /* what happened to the applicant's own email receipt (signed-in accounts only) */
+    function receiptNote(j){
+      var rc=j.receipt,au=w.__uaplyAuth?w.__uaplyAuth():null;
+      if(rc)return " "+({sent:"A receipt was emailed to "+rc.to+".",delivered_test:"Your receipt for "+rc.to+" is in the test inbox.",not_configured:"No receipt was emailed: email sending is not set up yet.",failed:"The receipt email could not be sent."}[rc.status]||"");
+      return au&&au.up&&!au.user?" Sign in (top right) to get an email receipt.":"";
+    }
     function deliver(){
-      /* the application is the profile itself: no cover note or message is written for the recruiter */
-      post("/api/apply",{consent:true,confirm_real:live,match:m.pct,note:"",
+      /* the application is the profile itself: no cover note or message is written for the recruiter, unless the person
+         turned on the opt-in "Message the hiring manager" preference (a sandbox experiment, off in dev) */
+      var msgOn=!!(w.__uaplyAutoMsg&&w.__uaplyAutoMsg()&&w.__uaplyMessage);
+      post("/api/apply",{consent:true,confirm_real:live,match:m.pct,note:msgOn?w.__uaplyMessage(job,m,p):"",
         job:{id:job.id,co:job.co,role:job.role,url:job.url||"https://example.com/example-listing",source:job.source,loc:job.loc,contact:job.contact||""},
         profile:{name:p.name,email:p.email,title:p.title,years:p.years,skills:p.skills,loc:p.loc,edu:p.edu,ext:p.ext||{}}
       }).then(function(r){
@@ -254,11 +274,11 @@ function kitApply(w,host){
         if(!r.ok){toast(j.error||"Could not send your application.","Try again",deliver,9000);return}
         var dec=S&&S.decisions&&S.decisions[job.id];
         if(dec&&j.status!=="duplicate"){dec.sent={at:Date.now(),to:j.to||"",status:j.status};if(save)save()}
-        var cp=j.copied?" A copy was emailed to you.":"";
-        if(j.status==="delivered_test")toast("Application sent to "+job.co+" (test inbox)."+cp);
-        else if(j.status==="sent")toast("Application sent to "+job.co+". Replies go to "+p.email+"."+cp);
+        var cp=(j.copied?" A copy was emailed to you.":"")+receiptNote(j);
+        if(j.status==="delivered_test")toast("Application sent to "+job.co+" (test inbox)."+cp,"","",9000);
+        else if(j.status==="sent")toast("Application sent to "+job.co+". Replies go to "+p.email+"."+cp,"","",9000);
         else if(j.status==="duplicate")toast("You already applied to "+job.co+".");
-        else if(j.status==="handoff")toast(job.co+" takes applications on its own site.",job.url?"Apply there":"",function(){if(w.__uaplyOpen)w.__uaplyOpen(job.url)},12000);
+        else if(j.status==="handoff")toast(job.co+" takes applications on its own site."+receiptNote(j),job.url?"Apply there":"",function(){if(w.__uaplyOpen)w.__uaplyOpen(job.url)},12000);
         else if(j.status==="failed")toast(j.error||"The email could not be sent.","Try again",deliver,9000);
         else toast("Done.");
       }).catch(function(){toast("Could not reach the server.","Try again",deliver,9000)});
