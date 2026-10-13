@@ -29,10 +29,10 @@ function darkBlocks(html) {
 
 function build(src, out, title, edits) {
   let h = read(src);
-  h = h.replace(/(<script src="uaply-[a-z]+\.js"><\/script>\s*)+/, inline + "\n");
+  h = h.replace(/(<script src="uaply-[a-z]+\.js"><\/script>\s*)+/, () => inline + "\n");
   if (!h.includes("__PROD_SRC")) throw new Error("script tags not found in " + src);
   h = h.replace(/<title>[^<]*<\/title>/, "<title>" + title + "</title>");
-  edits.forEach(([a, b]) => { if (!h.includes(a)) throw new Error("edit target missing: " + a.slice(0, 40)); h = h.replace(a, b); });
+  edits.forEach(([a, b]) => { if (!h.includes(a)) throw new Error("edit target missing: " + a.slice(0, 40)); h = h.replace(a, () => b); });
   h = darkBlocks(h);
   // the host adds the document skeleton
   h = h.replace(/<!doctype html>\s*/i, "").replace(/<html[^>]*>\s*/i, "").replace(/<head>\s*/i, "").replace(/<\/head>\s*/i, "")

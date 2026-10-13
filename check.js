@@ -61,6 +61,13 @@ try {
 console.log("Hosted copies build");
 const b = spawnSync(process.execPath, ["share/build-share.js", "--full"], { encoding: "utf8" });
 b.status === 0 ? ok("share/build-share.js --full") : bad("build failed\n" + b.stderr);
+for (const f of ["dev", "sandbox", "dev.full", "sandbox.full"]) {
+  const html = fs.readFileSync("share/" + f + ".html", "utf8");
+  const re = /<script(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/g;
+  let m, n = 0, broken = "";
+  while ((m = re.exec(html))) { n++; try { new Function(m[1]); } catch (e) { broken += " script " + n + ": " + e.message; } }
+  broken ? bad("hosted copy share/" + f + ".html has a script syntax error:" + broken) : ok("share/" + f + ".html: " + n + " inline scripts parse");
+}
 
 console.log(failed ? "\n" + failed + " problem(s) found." : "\nAll checks passed.");
 process.exit(failed ? 1 : 0);
