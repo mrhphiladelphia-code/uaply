@@ -13,8 +13,8 @@ function once(src,a,b){if(src.indexOf(a)<0)throw new Error("patch target not fou
 /* the profile object gets an `ext` bag; the app saves and restores it with the rest of the profile */
 function patch(s){
   s=once(s,'loc:typeof p.loc==="string"?p.loc:"",','loc:typeof p.loc==="string"?p.loc:"",ext:(p.ext&&typeof p.ext==="object")?p.ext:{},');
-  s=once(s,'salary:num($("pSalary").value,0,10000000),loc:$("pLoc").value.trim(),','salary:num($("pSalary").value,0,10000000),loc:$("pLoc").value.trim(),ext:(window.__uapplyExtRead?window.__uapplyExtRead():{}),');
-  s=once(s,'$("pSalary").value=p.salary;$("pLoc").value=p.loc;','$("pSalary").value=p.salary;$("pLoc").value=p.loc;if(window.__uapplyExtFill)window.__uapplyExtFill(p.ext||{});');
+  s=once(s,'salary:num($("pSalary").value,0,10000000),loc:$("pLoc").value.trim(),','salary:num($("pSalary").value,0,10000000),loc:$("pLoc").value.trim(),ext:(window.__uaplyExtRead?window.__uaplyExtRead():{}),');
+  s=once(s,'$("pSalary").value=p.salary;$("pLoc").value=p.loc;','$("pSalary").value=p.salary;$("pLoc").value=p.loc;if(window.__uaplyExtFill)window.__uaplyExtFill(p.ext||{});');
   return s;
 }
 
@@ -96,7 +96,7 @@ function apply(w){
     ALL.forEach(validate);update();
     setTimeout(update,0);   /* the app fills its own fields (like email) right after this, so recount once it is done */
   }
-  w.__uapplyExtRead=read;w.__uapplyExtFill=fill;
+  w.__uaplyExtRead=read;w.__uaplyExtFill=fill;
 
   /* validation, shown under each field */
   function validate(it){
@@ -149,8 +149,8 @@ function apply(w){
     if(bad){e.preventDefault();e.stopImmediatePropagation();goTo(bad.sec,id(bad.k))}
   },true);
 
-  fill(w.__uapply&&w.__uapply.S&&w.__uapply.S.profile&&w.__uapply.S.profile.ext||{});
+  fill(w.__uaply&&w.__uaply.S&&w.__uaply.S.profile&&w.__uaply.S.profile.ext||{});
 }
 
-window.UApplyProfile={patch:patch,apply:apply};
+window.UAplyProfile={patch:patch,apply:apply};
 })();

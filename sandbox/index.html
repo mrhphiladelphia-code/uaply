@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>UApply sandbox</title>
+<title>UAply sandbox</title>
 <style>
 /* SANDBOX: every experiment can be toggled freely. Own storage key, never touches prod or dev data. */
 :root{--bg:#FDF0F2;--surface:#FFFFFF;--ink:#2A1218;--muted:#7B5560;--line:#F3DADF;--accent:#C92A55;--accent2:#F0663B;--accent-ink:#FFFFFF}
@@ -31,21 +31,21 @@ iframe{border:1px solid var(--line);border-radius:14px;background:var(--bg);widt
 </head>
 <body>
 <div class="top">
-  <div class="row"><span class="badge">SANDBOX</span><b>UApply</b><span class="note" style="flex:1 1 200px">Experiment freely. Reads a copy of index.html (prod); prod is never changed.</span>
+  <div class="row"><span class="badge">SANDBOX</span><b>UAply</b><span class="note" style="flex:1 1 200px">Experiment freely. Reads a copy of index.html (prod); prod is never changed.</span>
     <div class="seg" id="size"><button data-s="desktop" aria-pressed="true">Desktop</button><button data-s="phone" aria-pressed="false">Phone</button></div>
     <button id="all" type="button">All on</button><button id="none" type="button">All off</button><button id="reset" type="button">Clear saved swipes</button><button id="fold" type="button" aria-expanded="true">Hide controls</button></div>
   <div class="chips" id="feats" role="group" aria-label="Experiments"></div>
   <p class="note" id="note">Pick an experiment to see what it does.</p>
 </div>
-<div class="stage" id="stage"><iframe id="app" title="UApply sandbox build"></iframe></div>
+<div class="stage" id="stage"><iframe id="app" title="UAply sandbox build"></iframe></div>
 <div class="log" id="log" aria-live="polite"></div>
-<script src="uapply-nav.js"></script>
-<script src="uapply-live.js"></script>
-<script src="uapply-profile.js"></script>
-<script src="uapply-envs.js"></script>
+<script src="uaply-nav.js"></script>
+<script src="uaply-live.js"></script>
+<script src="uaply-profile.js"></script>
+<script src="uaply-envs.js"></script>
 <script>
 (function(){
-var KEY="hireswipe.sandbox.v1",E=window.UApplyEnv,on={nav:true,profile:true,live:true,kit:true,submit:true,smart:true,fit:true,anim:true,guide:true,tap:true,dates:true,hint:true};
+var KEY="hireswipe.sandbox.v1",E=window.UAplyEnv,on={nav:true,profile:true,live:true,kit:true,submit:true,smart:true,fit:true,anim:true,guide:true,tap:true,dates:true,hint:true};
 var frame=document.getElementById("app"),noteEl=document.getElementById("note"),logEl=document.getElementById("log");
 function load(){logEl.classList.remove("on");logEl.innerHTML="";E.run(frame,on,KEY,function(err){if(err)noteEl.textContent="Problem: "+err})}
 function paint(n){document.querySelectorAll("#feats button").forEach(function(b){b.setAttribute("aria-pressed",on[b.dataset.k]?"true":"false")});if(n)noteEl.textContent=n}

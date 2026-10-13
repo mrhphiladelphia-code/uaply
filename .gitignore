@@ -1,6 +1,6 @@
 # secrets and local records: never commit these
-uapply-config.json
-uapply-partners.json
+uaply-config.json
+uaply-partners.json
 data/
 
 # generated

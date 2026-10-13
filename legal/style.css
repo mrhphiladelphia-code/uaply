@@ -1,4 +1,4 @@
-/* Shared look for UApply's legal pages: same colors as the app. Yellow marks are blanks the owner must fill in. */
+/* Shared look for UAply's legal pages: same colors as the app. Yellow marks are blanks the owner must fill in. */
 :root{--bg:#FDF0F2;--surface:#FFFFFF;--ink:#2A1218;--muted:#7B5560;--line:#F3DADF;--accent:#C92A55;--warn-bg:#FCEFD0;--warn:#7A4800}
 @media (prefers-color-scheme: dark){:root{--bg:#190B10;--surface:#26131A;--ink:#FBE9EE;--muted:#C79BA6;--line:#40222B;--accent:#FF7A98;--warn-bg:#3A2D10;--warn:#F5C265}}
 *{box-sizing:border-box}

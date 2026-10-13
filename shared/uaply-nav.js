@@ -15,7 +15,7 @@ var EXTRA=`,
  {id:20,type:"coop",co:"Lumen Labs",role:"Web Co-op",loc:"Remote (US)",mode:"remote",sal:[46000,56000],yrs:0,edu:"Associate",skills:["React","TypeScript","CSS","JavaScript"],blurb:"Full-semester co-op building customer-facing pages for a lighting startup."}`;
 
 var API=`
-window.__uapply={S:S,JOBS:JOBS,save:save,renderAll:renderAll,show:show,setFilter:setFilter,esc:esc,hue:hue,money:money,tone:tone,cap:cap,
+window.__uaply={S:S,JOBS:JOBS,save:save,renderAll:renderAll,show:show,setFilter:setFilter,esc:esc,hue:hue,money:money,tone:tone,cap:cap,
  setType:function(t){TYPE=t;renderDeck();renderDash()},getType:function(){return TYPE},
  setMin:function(n){MINPCT=n;renderDeck();renderDash()},getMin:function(){return MINPCT},getFilter:function(){return F}};`;
 
@@ -25,7 +25,7 @@ function patch(s){
   s=once(s,'&&(F==="all"||j.mode===F)}).map(function(j){return {j:j,m:evaluate(j,S.profile)}}).sort(',
            '&&(j.type||"job")===TYPE&&(F==="all"||j.mode===F)}).map(function(j){return {j:j,m:evaluate(j,S.profile)}}).filter(function(x){return x.m.pct>=MINPCT}).sort(');
   s=once(s,'<h2>You have seen every job</h2><p>Jobs you passed on can come back, and your applications are in the Applied tab.</p>',
-    `<h2>'+(MINPCT>0?"No jobs at "+MINPCT+"% match or higher":(JOBS.filter(function(j){return (j.type||"job")===TYPE&&(j.live||!window.__uapplyHideSamples)}).length?"You have seen every one of these":"Nothing listed here right now"))+'</h2><p>'+(MINPCT>0?"Lower the minimum match in Profile, then Filters.":(JOBS.filter(function(j){return (j.type||"job")===TYPE&&(j.live||!window.__uapplyHideSamples)}).length?"Jobs you passed on can come back, and your applications are in the Dashboard.":"New postings appear as employers publish them. Try another section or check back soon."))+'</p>`);
+    `<h2>'+(MINPCT>0?"No jobs at "+MINPCT+"% match or higher":(JOBS.filter(function(j){return (j.type||"job")===TYPE&&(j.live||!window.__uaplyHideSamples)}).length?"You have seen every one of these":"Nothing listed here right now"))+'</h2><p>'+(MINPCT>0?"Lower the minimum match in Profile, then Filters.":(JOBS.filter(function(j){return (j.type||"job")===TYPE&&(j.live||!window.__uaplyHideSamples)}).length?"Jobs you passed on can come back, and your applications are in the Dashboard.":"New postings appear as employers publish them. Try another section or check back soon."))+'</p>`);
   s=once(s,'title:String(x.title||"")};','title:String(x.title||""),st:(x.st==="interview"||x.st==="accepted"||x.st==="rejected")?x.st:"applied",sent:(x.sent&&typeof x.sent==="object")?{at:+x.sent.at||0,to:String(x.sent.to||"").slice(0,120),status:String(x.sent.status||"").slice(0,20)}:undefined};');
   /* profile gets an email so a recruiter can reply */
   s=once(s,'salary:100000,loc:"New York",','salary:100000,loc:"New York",email:"jordan.lee@example.com",');
@@ -34,7 +34,7 @@ function patch(s){
   s=once(s,'$("pSalary").value=p.salary;$("pLoc").value=p.loc;','$("pSalary").value=p.salary;$("pLoc").value=p.loc;if($("pEmail"))$("pEmail").value=p.email||"";');
   s=once(s,'title:S.profile.title||""};','title:S.profile.title||"",st:"applied"};');
   s=once(s,"<span>'+cap(j.mode)+'</span>","<span>'+cap(j.mode)+'</span>'+(j.type&&j.type!==\"job\"?'<span>'+(j.type===\"internship\"?\"Internship\":\"Co-op\")+'</span>':'')+'");
-  s=once(s,'function show(t,focusPane){','function show(t,focusPane){if(window.__uapplyOnShow)window.__uapplyOnShow(t);');
+  s=once(s,'function show(t,focusPane){','function show(t,focusPane){if(window.__uaplyOnShow)window.__uaplyOnShow(t);');
   s=once(s,'function renderAll(){renderDeck();renderApps();renderDash()}','function renderAll(){renderDeck();renderApps();renderDash()}'+API);
   return s;
 }
@@ -65,10 +65,10 @@ body{padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}
 `;
 
 function apply(w,host){
-  var d=w.document,A=w.__uapply;
+  var d=w.document,A=w.__uaply;
   if(!A)throw new Error("app hooks missing");
-  var OPTS=(host&&host.defaultView&&host.defaultView.UApplyOpts)||{};   /* e.g. dev sets hideServiceCounts */
-  var NK=w.__uapplyKey+".nav";
+  var OPTS=(host&&host.defaultView&&host.defaultView.UAplyOpts)||{};   /* e.g. dev sets hideServiceCounts */
+  var NK=w.__uaplyKey+".nav";
   var SECS={
     svc:{label:"Services",items:[["job","Jobs"],["internship","Internships"],["coop","Co-ops"]]},
     dash:{label:"Dashboard",items:[["applied","Applied"],["accepted","Accepted"],["rejected","Rejected"],["interview","Interviews"]]},
@@ -116,7 +116,7 @@ function apply(w,host){
     var n=0;
     if(k==="prof"||(k==="svc"&&OPTS.hideServiceCounts))return "";
     A.JOBS.forEach(function(j){
-      if(w.__uapplyHideSamples&&!j.live)return;
+      if(w.__uaplyHideSamples&&!j.live)return;
       var x=A.S.decisions[j.id];
       if(k==="svc"){if(!x&&(j.type||"job")===v)n++}
       else if(x&&x.s==="applied"&&(x.st||"applied")===v)n++;
@@ -214,7 +214,7 @@ function apply(w,host){
     var id=+b.getAttribute("data-id"),act=b.getAttribute("data-act"),x=A.S.decisions[id];if(!x)return;
     if(act==="open"){
       var job=A.JOBS.filter(function(j){return j.id===id})[0];
-      if(job&&w.__uapplyOpen)w.__uapplyOpen(job.url);
+      if(job&&w.__uaplyOpen)w.__uaplyOpen(job.url);
       return;
     }
     if(act==="withdraw"||act==="reconsider"){delete A.S.decisions[id];A.S.history=A.S.history.filter(function(i){return i!==id})}
@@ -267,7 +267,7 @@ function apply(w,host){
     }
     going=false;refresh();main.scrollTop=0;
   }
-  w.__uapplyOnShow=function(t){
+  w.__uaplyOnShow=function(t){
     tp.hidden=true;
     if(going)return;
     cur=t==="profile"?"prof":"svc";
@@ -278,5 +278,5 @@ function apply(w,host){
   refresh();
 }
 
-window.UApplyNav={patch:patch,apply:apply};
+window.UAplyNav={patch:patch,apply:apply};
 })();

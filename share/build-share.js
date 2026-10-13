@@ -5,9 +5,9 @@
 const fs = require("fs");
 const read = (p) => fs.readFileSync(p, "utf8");
 const prod = read("prod/index.html");
-const nav = read("shared/uapply-nav.js");
-const profile = read("shared/uapply-profile.js");
-let envs = read("shared/uapply-envs.js");
+const nav = read("shared/uaply-nav.js");
+const profile = read("shared/uaply-profile.js");
+let envs = read("shared/uaply-envs.js");
 
 const NEEDS_SERVER = ["live", "kit", "submit"];
 envs = envs.replace(/fetch\("prod-index\.html",\{cache:"no-store"\}\)\.then\(function\(r\)\{return r\.text\(\)\}\)/, "Promise.resolve(window.__PROD_SRC)");
@@ -29,7 +29,7 @@ function darkBlocks(html) {
 
 function build(src, out, title, edits) {
   let h = read(src);
-  h = h.replace(/(<script src="uapply-[a-z]+\.js"><\/script>\s*)+/, inline + "\n");
+  h = h.replace(/(<script src="uaply-[a-z]+\.js"><\/script>\s*)+/, inline + "\n");
   if (!h.includes("__PROD_SRC")) throw new Error("script tags not found in " + src);
   h = h.replace(/<title>[^<]*<\/title>/, "<title>" + title + "</title>");
   edits.forEach(([a, b]) => { if (!h.includes(a)) throw new Error("edit target missing: " + a.slice(0, 40)); h = h.replace(a, b); });
@@ -46,10 +46,10 @@ function build(src, out, title, edits) {
   }
 }
 
-build("sandbox/index.html", "share/sandbox.html", "UApply Sandbox", [
+build("sandbox/index.html", "share/sandbox.html", "UAply Sandbox", [
   ["on={nav:true,profile:true,live:true,kit:true,submit:true,", "on={nav:true,profile:true,"],
   ["Experiment freely. Reads a copy of index.html (prod); prod is never changed.", "Experiment freely. Hosted copy: example jobs only, and your swipes stay in your own browser."],
 ]);
-build("dev/index.html", "share/dev.html", "UApply Dev", [
+build("dev/index.html", "share/dev.html", "UAply Dev", [
   ['var PROMOTED=["nav","live","kit","submit",', 'var PROMOTED=["nav",'],
 ]);
