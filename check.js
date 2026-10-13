@@ -25,14 +25,16 @@ console.log("Scripts inside the pages");
 });
 
 console.log("Python files");
-const py = process.platform === "win32" ? "python" : "python3";
-["serve.py", "jobs_api.py", "uaply_api.py"].forEach((f) => {
+/* On Windows "python" is often only a Microsoft Store shortcut; fall back to the "py" launcher when it does not run. */
+const py = process.platform !== "win32" ? "python3"
+  : (spawnSync("python", ["--version"], { encoding: "utf8" }).status === 0 ? "python" : "py");
+["serve.py", "jobs_api.py", "uaply_api.py", "auth_api.py", "chat_api.py"].forEach((f) => {
   const r = spawnSync(py, ["-m", "py_compile", f], { encoding: "utf8" });
   r.status === 0 ? ok(f) : bad(f + "\n" + (r.stderr || r.error));
 });
 
 console.log("JSON files");
-["uaply-config.example.json", ".claude/launch.json"].forEach((f) => {
+["uaply-config.example.json", ".claude/launch.json", "help/articles.json"].forEach((f) => {
   try { JSON.parse(fs.readFileSync(f, "utf8")); ok(f); } catch (e) { bad(f + ": " + e.message); }
 });
 
@@ -59,6 +61,13 @@ try {
 console.log("Hosted copies build");
 const b = spawnSync(process.execPath, ["share/build-share.js", "--full"], { encoding: "utf8" });
 b.status === 0 ? ok("share/build-share.js --full") : bad("build failed\n" + b.stderr);
+for (const f of ["dev", "sandbox", "dev.full", "sandbox.full"]) {
+  const html = fs.readFileSync("share/" + f + ".html", "utf8");
+  const re = /<script(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/g;
+  let m, n = 0, broken = "";
+  while ((m = re.exec(html))) { n++; try { new Function(m[1]); } catch (e) { broken += " script " + n + ": " + e.message; } }
+  broken ? bad("hosted copy share/" + f + ".html has a script syntax error:" + broken) : ok("share/" + f + ".html: " + n + " inline scripts parse");
+}
 
 console.log(failed ? "\n" + failed + " problem(s) found." : "\nAll checks passed.");
 process.exit(failed ? 1 : 0);

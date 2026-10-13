@@ -1,0 +1,11 @@
+{
+  "appId": "com.uaply.app",
+  "appName": "UAply",
+  "webDir": "www",
+  "server": {
+    "url": "https://uaply-dev.onrender.com",
+    "cleartext": false
+  },
+  "ios": { "contentInset": "always" },
+  "android": { "allowMixedContent": false }
+}

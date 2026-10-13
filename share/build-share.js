@@ -9,7 +9,7 @@ const nav = read("shared/uaply-nav.js");
 const profile = read("shared/uaply-profile.js");
 let envs = read("shared/uaply-envs.js");
 
-const NEEDS_SERVER = ["live", "kit", "submit"];
+const NEEDS_SERVER = ["live", "kit", "submit", "chat"];   // the assistant needs chat_api.py, which a static host cannot run
 envs = envs.replace(/fetch\("prod-index\.html",\{cache:"no-store"\}\)\.then\(function\(r\)\{return r\.text\(\)\}\)/, "Promise.resolve(window.__PROD_SRC)");
 envs = envs.replace(/var ORDER=\[([^\]]*)\];/, (m, list) => {
   const kept = list.split(",").map((s) => s.trim()).filter((s) => !NEEDS_SERVER.includes(s.replace(/"/g, "")));
@@ -29,10 +29,10 @@ function darkBlocks(html) {
 
 function build(src, out, title, edits) {
   let h = read(src);
-  h = h.replace(/(<script src="uaply-[a-z]+\.js"><\/script>\s*)+/, inline + "\n");
+  h = h.replace(/(<script src="uaply-[a-z]+\.js"><\/script>\s*)+/, () => inline + "\n");
   if (!h.includes("__PROD_SRC")) throw new Error("script tags not found in " + src);
   h = h.replace(/<title>[^<]*<\/title>/, "<title>" + title + "</title>");
-  edits.forEach(([a, b]) => { if (!h.includes(a)) throw new Error("edit target missing: " + a.slice(0, 40)); h = h.replace(a, b); });
+  edits.forEach(([a, b]) => { if (!h.includes(a)) throw new Error("edit target missing: " + a.slice(0, 40)); h = h.replace(a, () => b); });
   h = darkBlocks(h);
   // the host adds the document skeleton
   h = h.replace(/<!doctype html>\s*/i, "").replace(/<html[^>]*>\s*/i, "").replace(/<head>\s*/i, "").replace(/<\/head>\s*/i, "")
