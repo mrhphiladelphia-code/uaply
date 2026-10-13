@@ -11,6 +11,11 @@ Serves ROOT; each urlpath=file alias maps one URL to a file outside ROOT (e.g. /
   POST /api/auth/login    sign in
   POST /api/auth/logout   sign out
   POST /api/auth/delete   delete the signed-in account (password required) and forget its application records
+  GET  /api/chat/config   whether the assistant's AI answers are on (chat_api.py)
+  POST /api/chat          UAply Assistant: answer a support question from the help articles
+  POST /api/feedback      store feedback sent through the assistant
+  GET  /feedback          the feedback summary page (this server only listens on this computer)
+  GET  /help/articles.json  the help articles the assistant answers from
 Accounts use an HttpOnly session cookie. When a signed-in user swipes right, a receipt goes to their email."""
 import sys, os, json, http.server, http.cookies
 
@@ -30,11 +35,13 @@ if api:
     # the sandbox and dev pages load these shared files and a copy of the production page; no command-line aliases needed
     for url, rel in (("/uaply-envs.js", "shared/uaply-envs.js"), ("/uaply-nav.js", "shared/uaply-nav.js"),
                      ("/uaply-live.js", "shared/uaply-live.js"), ("/uaply-profile.js", "shared/uaply-profile.js"),
+                     ("/uaply-chat.js", "shared/uaply-chat.js"), ("/help/articles.json", "help/articles.json"),
                      ("/prod-index.html", "prod/index.html")):
         alias.setdefault(url, os.path.join(HERE, rel))
-    import jobs_api, uaply_api, auth_api
+    import jobs_api, uaply_api, auth_api, chat_api
     uaply_api.init(os.path.basename(root))
     auth_api.init(os.path.basename(root))
+    chat_api.init(os.path.basename(root))
     import threading
     threading.Thread(target=jobs_api.get_jobs, daemon=True).start()   # warm the job cache so the first visitor does not wait
 
@@ -88,13 +95,18 @@ class H(http.server.SimpleHTTPRequestHandler):
                     return self._send(200, uaply_api.outbox_html(), "text/html; charset=utf-8")
                 if p == "/api/auth/me":
                     return self._send(200, {"user": auth_api.user_for(self._token())})
+                if p == "/api/chat/config":
+                    return self._send(200, chat_api.public_config())
+                if p == "/feedback":
+                    return self._send(200, chat_api.feedback_html(), "text/html; charset=utf-8")
             except Exception as e:
                 return self._send(502, {"error": str(e)[:100]})
         super().do_GET()
 
     def do_POST(self):
         p = self.path.split("?", 1)[0]
-        if not api or p not in ("/api/apply", "/api/decision", "/api/auth/signup", "/api/auth/login", "/api/auth/logout", "/api/auth/delete"):
+        if not api or p not in ("/api/apply", "/api/decision", "/api/auth/signup", "/api/auth/login", "/api/auth/logout",
+                                "/api/auth/delete", "/api/chat", "/api/feedback"):
             return self._send(404, {"error": "not found"})
         # Only accept requests made by this site's own pages (blocks cross-site forms and scripts).
         origin = self.headers.get("Origin")
@@ -124,9 +136,14 @@ class H(http.server.SimpleHTTPRequestHandler):
                 code, out, uid = auth_api.delete_account(self._token(), payload.get("password"), ip)
                 if uid:
                     out["applicationsRemoved"] = uaply_api.forget_user(uid)
+                    chat_api.forget_user(uid)
                     return self._send(code, out, headers=self._cookie(""))
                 return self._send(code, out)
-            if p == "/api/apply":
+            if p == "/api/chat":
+                code, out = chat_api.chat(payload, ip)
+            elif p == "/api/feedback":
+                code, out = chat_api.feedback(payload, ip, auth_api.user_for(self._token()))
+            elif p == "/api/apply":
                 code, out = uaply_api.submit(payload, auth_api.user_for(self._token()))
             else:
                 code, out = uaply_api.record_decision(payload)

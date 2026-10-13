@@ -144,7 +144,8 @@ var FEATURES={
    };
  }}
 };
-var ORDER=["easy","confirm","axis","caps","smart","top2","nav","profile","live","kit","submit","fit","guide","tap","dates","hint","anim","a11y","backend"];
+FEATURES.chat={name:"Assistant and feedback",note:"A Help button (bottom right) opens UAply Assistant: answers from UAply's help articles (written by AI when an API key is set on the server, and labeled AI or Automated either way), one-question-at-a-time feedback, problem reports, a way to reach a person, and a one-tap rating after the third application in a visit. Needs this server's back end.",apply:function(w,host){window.UAplyChat.apply(w,host)}};
+var ORDER=["easy","confirm","axis","caps","smart","top2","nav","profile","live","kit","submit","fit","guide","tap","dates","hint","anim","a11y","backend","chat"];   /* chat last: it wraps the apply hook set by kit */
 
 function build(on,key){
   return fetch("prod-index.html",{cache:"no-store"}).then(function(r){return r.text()}).then(function(src){
