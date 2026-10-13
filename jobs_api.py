@@ -41,6 +41,8 @@ DEFAULT_TTL = 30 * 60
 TTL = {"remotive": 6 * 3600,          # Remotive allows roughly 4 requests a day
        "jobicy": 3600}                # Jobicy asks for at most one sync pass an hour
 PER_SOURCE = 14
+STUDENT_PER_SOURCE = 10          # internships, co-ops and part-time roles are kept first so the student tabs are not empty
+OTHER_PER_SOURCE = 6
 
 # (kind, board token, display name). Boards are the employer's own public careers feed.
 SOURCES = [
@@ -49,6 +51,24 @@ SOURCES = [
     ("greenhouse", "duolingo", "Duolingo"),
     ("greenhouse", "squarespace", "Squarespace"),
     ("greenhouse", "webflow", "Webflow"),
+    # employers whose own public boards carried internships when checked (October 2026)
+    ("greenhouse", "waymo", "Waymo"),
+    ("greenhouse", "coinbase", "Coinbase"),
+    ("greenhouse", "robinhood", "Robinhood"),
+    ("greenhouse", "lyft", "Lyft"),
+    ("greenhouse", "stripe", "Stripe"),
+    ("greenhouse", "databricks", "Databricks"),
+    ("greenhouse", "pinterest", "Pinterest"),
+    ("greenhouse", "figma", "Figma"),
+    ("greenhouse", "datadog", "Datadog"),
+    ("greenhouse", "verkada", "Verkada"),
+    ("greenhouse", "samsara", "Samsara"),
+    ("greenhouse", "roblox", "Roblox"),
+    ("greenhouse", "block", "Block"),
+    ("greenhouse", "cloudflare", "Cloudflare"),
+    ("greenhouse", "scaleai", "Scale AI"),
+    ("greenhouse", "affirm", "Affirm"),
+    ("greenhouse", "imc", "IMC Trading"),
     ("lever", "spotify", "Spotify"),
     ("ashby", "linear", "Linear"),
     ("remotive", "software-dev", "Remotive"),
@@ -304,13 +324,13 @@ def _fetch_source(src):
     kind, token, name = src
     ttl = TTL.get(kind, DEFAULT_TTL)
     try:
-        jobs = []
+        student, other = [], []
         for raw in _fetch_raw(kind, token, name):
             j = _normalize(raw, kind, name)
             if j:
-                jobs.append(j)
-            if len(jobs) >= PER_SOURCE:
-                break
+                (student if j["type"] in ("internship", "coop", "parttime") else other).append(j)
+        # keep the student-type roles first (a board can list hundreds of senior roles ahead of its internships)
+        jobs = student[:STUDENT_PER_SOURCE] + other[:max(OTHER_PER_SOURCE, PER_SOURCE - len(student[:STUDENT_PER_SOURCE]))]
         status = "%d jobs" % len(jobs)
     except Exception as e:                      # keep serving the last good copy if the feed is down
         c = _cache.get(src)

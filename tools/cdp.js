@@ -35,6 +35,10 @@ const CHROME = path.join(process.env.LOCALAPPDATA || "", "Google", "Chrome", "Ap
   const send = (method, params = {}) => new Promise((r) => { const i = ++id; pending[i] = r; ws.send(JSON.stringify({ id: i, method, params })); });
   await send("Runtime.enable");
   await send("Page.enable");
+  if (process.env.W && Number(process.env.W) < 700) {          // phone sizes: real device emulation (a headless window cannot go below ~500px)
+    await send("Emulation.setDeviceMetricsOverride", { width: Number(process.env.W), height: Number(process.env.H || 844), deviceScaleFactor: 3, mobile: true });
+    await send("Emulation.setTouchEmulationEnabled", { enabled: true });
+  }
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const ev = async (expr) => {
     const r = await send("Runtime.evaluate", { expression: expr, awaitPromise: true, returnByValue: true });
