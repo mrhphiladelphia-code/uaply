@@ -293,6 +293,7 @@ function apply(w,host){
     if(act==="details"){OPEN[id]=!OPEN[id];renderTrack();return}
     if(act==="savedet"){saveDet(id,b.closest(".row"));return}
     if(act==="ics"){exportIcs(id);return}
+    if(act==="share"){var sj=A.JOBS.filter(function(j){return j.id===id})[0];if(sj)shareJob(sj);return}
     if(act==="withdraw"||act==="reconsider"){delete A.S.decisions[id];A.S.history=A.S.history.filter(function(i){return i!==id});delete acct.apps[id];saveA()}
     else{x.st=act;if(act==="interview"||act==="accepted"||act==="rejected")OPEN[id]=true}
     A.save();A.renderAll();renderTrack();
@@ -349,9 +350,10 @@ function apply(w,host){
   /* ---------- account: per-application details, preferences/filters, resume, plan, data, dashboard overview ---------- */
   var AK=w.__uaplyKey+".acct",E=A.esc,OPEN={};
   var PLANS={
-    trial:{name:"Free trial",price:0,cap:10,days:14,perks:["10 applications","14 days","Every feature"]},
-    starter:{name:"Starter",price:9,cap:30,perks:["30 applications a month","Dashboard and tracking","Resume and links"]},
-    pro:{name:"Pro",price:19,cap:0,perks:["Unlimited applications","Interview calendar files","Priority support"]}
+    /* internal keys stay trial/starter/pro so saved choices keep working; the names and limits are the decided plan */
+    trial:{name:"Free",price:0,cap:50,perks:["50 applications a week","Full dashboard and tracking","Core filters"]},
+    starter:{name:"Plus",price:9.99,cap:250,perks:["250 applications a week","Benefits, applicant and dealbreaker filters","Message the hiring manager"]},
+    pro:{name:"Pro",price:19.99,cap:0,perks:["Unlimited applications (fair use)","Everything in Plus","Priority support"]}
   };
   var PERKS=[["health","Health insurance"],["dental","Dental insurance"],["vision","Vision insurance"],["k401","401(k)"],["match","401(k) with employer match"],["loan","Student loan repayment"],["stock","Stock options"],["pto","Paid time off (PTO)"],["maternity","Paid maternity leave"],["paternity","Paid paternity leave"],["tuition","Tuition assistance"]];
   var PERK_KEYS=PERKS.map(function(p){return p[0]});
@@ -497,20 +499,18 @@ function apply(w,host){
     if(acct.pay.length>24){acct.pay=acct.pay.slice(-24);ch=true}
     if(ch)saveA();
   }
+  /* limits are per rolling week: applications made in the last 7 days */
   function usedCount(){
-    var start=acct.plan==="trial"?acct.since:acct.renews-30*DAY,n=0;
+    var start=Date.now()-7*DAY,n=0;
     Object.keys(A.S.decisions).forEach(function(k){var x=A.S.decisions[k];if(x.s==="applied"&&x.at>=start)n++});
     return n;
   }
   function planState(){
     tick();
-    var p=PLANS[acct.plan],u=usedCount(),r={plan:p,used:u,cap:p.cap,left:p.cap?Math.max(0,p.cap-u):null,days:null,ok:true,why:""};
-    if(acct.plan==="trial"){
-      var dl=Math.ceil((acct.since+p.days*DAY-Date.now())/DAY);r.days=Math.max(0,dl);
-      if(dl<=0){r.ok=false;r.why="Your "+p.days+"-day free trial has ended."}
-      else if(u>=p.cap){r.ok=false;r.why="You used all "+p.cap+" free-trial applications."}
-    }else if(acct.canceled&&acct.renews<Date.now()){r.ok=false;r.why="Your subscription has ended."}
-    else if(p.cap&&u>=p.cap){r.ok=false;r.why="You reached "+p.cap+" applications this month on "+p.name+"."}
+    var p=PLANS[acct.plan];
+    if(acct.plan!=="trial"&&acct.canceled&&acct.renews<Date.now())p=PLANS.trial;      /* a canceled plan that ran out is back on Free */
+    var u=usedCount(),r={plan:p,used:u,cap:p.cap,left:p.cap?Math.max(0,p.cap-u):null,days:null,ok:true,why:""};
+    if(p.cap&&u>=p.cap){r.ok=false;r.why="You've used all "+p.cap+" applications this week on "+p.name+". One frees up each time an application turns a week old."}
     return r;
   }
   w.__uaplyGate=function(){
@@ -572,6 +572,7 @@ function apply(w,host){
     if(v!=="passed")r.push(["details",OPEN[id]?"Hide details":"Details"]);
     if(v==="interview"&&ap(id).when)r.push(["ics","Add to calendar"]);
     if(o.j.url)r.push(["open","Open posting"]);
+    r.push(["share","Share"]);
     return r;
   }
   function detForm(o,v){
@@ -598,7 +599,45 @@ function apply(w,host){
     });
     if(Object.keys(a).length)acct.apps[id]=a;else delete acct.apps[id];
     saveA();renderTrack();
+    var job=A.JOBS.filter(function(j){return j.id===id})[0];
+    if(job)remindInterview(id,job,a.when||"");
   }
+
+  /* ---------- phone-app features (App Store / Google Play build in mobile/). They switch on only when the page runs
+     inside the Capacitor app; on the website every helper quietly does nothing or uses the browser equivalent. ---------- */
+  function cap(){var c=w.Capacitor||(w.parent&&w.parent!==w&&w.parent.Capacitor);return c&&c.isNativePlatform&&c.isNativePlatform()?c:null}
+  function plug(name){var c=cap();return c&&c.Plugins&&c.Plugins[name]||null}
+  function noteId(id){return Math.abs(+id)%2000000000||1}
+  /* two reminders for each interview: the evening before (6 pm) and one hour before */
+  function remindInterview(id,job,when){
+    var LN=plug("LocalNotifications");if(!LN)return;
+    var base=noteId(id)*2%2000000000,ids=[{id:base},{id:base+1}];
+    Promise.resolve(LN.cancel({notifications:ids})).catch(function(){}).then(function(){
+      var t=new Date(when);if(!when||isNaN(t))return;
+      var eve=new Date(t);eve.setDate(eve.getDate()-1);eve.setHours(18,0,0,0);
+      var hour=new Date(t.getTime()-36e5),now=Date.now(),list=[];
+      if(eve.getTime()>now)list.push({id:base,title:"Interview tomorrow",body:job.role+" at "+job.co+", "+fmtDT(when),schedule:{at:eve}});
+      if(hour.getTime()>now)list.push({id:base+1,title:"Interview in 1 hour",body:job.role+" at "+job.co,schedule:{at:hour}});
+      if(!list.length)return;
+      return Promise.resolve(LN.requestPermissions()).then(function(p){if(p&&p.display==="granted")return LN.schedule({notifications:list})});
+    }).catch(function(){});
+  }
+  /* share a job: the phone's share sheet in the app, the browser's on phones that have one, else copy the link */
+  function shareJob(job){
+    var url=job.url||"",text=job.role+" at "+job.co+(url?"":" (on UAply)"),SH=plug("Share");
+    if(SH)return SH.share({title:text,text:text,url:url||undefined}).catch(function(){});
+    if(w.navigator.share)return w.navigator.share({title:text,text:text,url:url||undefined}).catch(function(){});
+    if(w.navigator.clipboard)w.navigator.clipboard.writeText(text+(url?" "+url:"")).then(function(){showToastNote("Copied to share.")}).catch(function(){});
+  }
+  function showToastNote(m){var t=d.createElement("div");t.className="toast";t.setAttribute("role","status");t.textContent=m;d.body.appendChild(t);setTimeout(function(){t.remove()},2500)}
+  /* a light tap on the phone when a swipe lands */
+  setTimeout(function(){
+    var prev=w.__uaplyOnDecision;
+    w.__uaplyOnDecision=function(dir){
+      var H=plug("Haptics");if(H)Promise.resolve(H.impact({style:dir==="applied"?"MEDIUM":"LIGHT"})).catch(function(){});
+      return prev?prev.apply(this,arguments):undefined;
+    };
+  },0);
   function icsTime(t){function z(n){return (n<10?"0":"")+n}return t.getUTCFullYear()+z(t.getUTCMonth()+1)+z(t.getUTCDate())+"T"+z(t.getUTCHours())+z(t.getUTCMinutes())+"00Z"}
   function icsText(s){return String(s).replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\r?\n/g,"\\n")}
   function download(name,type,text){
@@ -637,7 +676,7 @@ function apply(w,host){
     cl.filter(function(c){return !c[1]}).slice(0,4).forEach(function(c){h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><span>'+E(c[0])+'</span><button type="button" class="btn ghost" data-go="'+c[2]+'">Add</button></div>'});
     if(done===cl.length)h+='<small>Everything employers usually ask for is filled in.</small>';
     h+='</div><div class="plan" style="display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:14px;padding:14px;background:var(--surface)"><b>'+E(ps.plan.name)+(acct.enforce?"":' <small>(limits off in sandbox)</small>')+'</b><small>'+
-      (ps.cap?ps.used+" of "+ps.cap+" applications used":ps.used+" applications this month, no limit")+(ps.days!=null?" · "+ps.days+" days left":"")+(ps.ok?"":" · "+E(ps.why))+'</small><button type="button" class="btn ghost" data-go="plan" style="align-self:flex-start">Manage plan</button></div>';
+      (ps.cap?ps.used+" of "+ps.cap+" applications used this week":ps.used+" applications this week, no limit")+(ps.ok?"":" · "+E(ps.why))+'</small><button type="button" class="btn ghost" data-go="plan" style="align-self:flex-start">Manage plan</button></div>';
     if(!(SRV&&SRV.user)&&!session())h+='<div class="plan" style="display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:14px;padding:14px;background:var(--surface)"><b>Save your progress</b><small>Sign in so your profile and applications are kept if you switch devices.</small><button type="button" class="btn" data-go="account" style="align-self:flex-start">Sign in or create account</button></div>';
     h+='<h3>Coming up</h3>'+(soon.length?soon.slice(0,6).map(function(s){return '<p class="note" style="margin:0">'+E(s[1])+'</p>'}).join(""):'<p class="note">Nothing scheduled. Open an application, tap Details and add an interview time, offer deadline or follow-up date.</p>');
     h+='<div class="acts"><button type="button" class="btn" data-go="svc">Find opportunities</button><button type="button" class="btn ghost" data-go="dash:interview">Interviews</button><button type="button" class="btn ghost" data-csv="1">Export applications (CSV)</button></div></div>';
@@ -945,7 +984,7 @@ function apply(w,host){
      application, so only to employers that agreed to receive applications through UAply (the server decides that).
      The owner's legal review advised against writing messages for recruiters; the product owner chose to include it on
      2026-10-13, so it needs the attorney review before launch. */
-  function autoAllowed(){var s=planState();return acct.plan!=="trial"&&s.ok}
+  function autoAllowed(){var s=planState();return s.plan!==PLANS.trial&&s.ok}
   w.__uaplyAutoMsg=function(){return autoAllowed()&&!!acct.fAuto};
   w.__uaplyMessage=function(job,m,p){
     var skills=(m.matched||[]).slice(0,3),name=p.name||"[Your name]",sumv=summaryOf();
@@ -1003,16 +1042,16 @@ function apply(w,host){
     }else if(v==="plan"){
       var ps=planState();
       h+='<div class="plan" style="display:flex;flex-direction:column;gap:6px"><span class="tag">SANDBOX · TEST MODE</span><b>Current plan: '+E(ps.plan.name)+(acct.canceled&&acct.plan!=="trial"?" (ends "+new Date(acct.renews).toLocaleDateString()+")":"")+'</b>'+
-        '<small>'+(ps.cap?ps.used+" of "+ps.cap+" applications used":ps.used+" applications this month")+(ps.days!=null?" · "+ps.days+" days left in trial":"")+(acct.plan!=="trial"&&!acct.canceled?" · renews "+new Date(acct.renews).toLocaleDateString():"")+'</small>'+
+        '<small>'+(ps.cap?ps.used+" of "+ps.cap+" applications used this week":ps.used+" applications this week, no limit")+(acct.plan!=="trial"&&!acct.canceled?" · renews "+new Date(acct.renews).toLocaleDateString():"")+'</small>'+
         (ps.cap?'<div class="bar"><i style="width:'+Math.min(100,Math.round(ps.used/ps.cap*100))+'%"></i></div>':"")+(ps.ok?"":'<p class="note" style="margin:0">'+E(ps.why)+'</p>')+'</div><div class="plans">';
       Object.keys(PLANS).forEach(function(k){
         var p=PLANS[k],cur=acct.plan===k;
-        h+='<div class="plan" data-cur="'+cur+'"><b>'+p.name+'</b><span class="pr">'+(p.price?"$"+p.price+'<small>/month</small>':"Free")+'</span><ul>'+p.perks.map(function(x){return '<li>'+E(x)+'</li>'}).join("")+'</ul>'+
-          (k==="trial"?'':(cur?(acct.canceled?'<button type="button" class="btn" data-a="resub">Resume subscription</button>':'<button type="button" class="btn ghost" data-a="cancel">Cancel plan</button>'):'<button type="button" class="btn" data-plan="'+k+'">'+(acct.plan==="trial"?"Choose ":"Switch to ")+p.name+' (test)</button>'))+'</div>';
+        h+='<div class="plan" data-cur="'+cur+'"><b>'+p.name+'</b><span class="pr">'+(p.price?"$"+p.price.toFixed(2)+'<small>/month</small>':"$0")+'</span><ul>'+p.perks.map(function(x){return '<li>'+E(x)+'</li>'}).join("")+'</ul>'+
+          (k==="trial"?(cur?'<small>Your current plan</small>':''):(cur?(acct.canceled?'<button type="button" class="btn" data-a="resub">Resume subscription</button>':'<button type="button" class="btn ghost" data-a="cancel">Cancel plan</button>'):'<button type="button" class="btn" data-plan="'+k+'">'+(acct.plan==="trial"?"Choose ":"Switch to ")+p.name+' (test)</button>'))+'</div>';
       });
       h+='</div><p class="note">In the live app, paid plans open a secure checkout from a payment provider. UAply never sees or stores card numbers. In the sandbox, choosing a plan only records a test payment.</p>'+
         '<h3>Payments</h3>'+(acct.pay.length?acct.pay.slice().reverse().map(function(p){return '<div class="todo"><span>'+new Date(p.at).toLocaleDateString()+' · '+E(PLANS[p.plan]?PLANS[p.plan].name:"Plan")+'</span><span>$'+(+p.amt||0).toFixed(2)+' (test)</span></div>'}).join(""):'<p class="note">No payments yet.</p>')+
-        '<h3>Sandbox controls</h3><label class="toggle"><input type="checkbox" id="aEnf"'+(acct.enforce?" checked":"")+'> Enforce plan limits (shows the paywall when the trial or monthly limit runs out)</label><div class="acts"><button type="button" class="btn ghost" data-a="rtrial">Restart free trial</button></div>';
+        '<h3>Sandbox controls</h3><label class="toggle"><input type="checkbox" id="aEnf"'+(acct.enforce?" checked":"")+'> Enforce plan limits (shows the paywall when the weekly limit runs out)</label><div class="acts"><button type="button" class="btn ghost" data-a="rtrial">Go back to Free</button></div>';
     }else{
       h+='<h3 style="font-size:15px">Back up</h3><p class="note" style="margin:0">Your profile, applications and details in one file you keep.</p><div class="acts"><button type="button" class="btn" data-a="exp">Download backup (JSON)</button><button type="button" class="btn ghost" data-csv="1">Applications (CSV)</button></div>'+
         '<h3 style="font-size:15px">Restore</h3><input type="file" id="aImp" accept=".json,application/json"><small>Replaces what is on this device with the file. Only files made by UAply are accepted.</small>'+
@@ -1066,7 +1105,7 @@ function apply(w,host){
     else if(a==="toprefs"){sub.prof="preferences";cur="prof";go("prof")}
     else if(a==="cancel"){acct.canceled=true;saveA();renderAcct("plan");msg("Plan canceled. It stays active until the end of the period.")}
     else if(a==="resub"){acct.canceled=false;if(acct.renews<Date.now())acct.renews=Date.now()+30*DAY;saveA();renderAcct("plan");msg("Subscription resumed.")}
-    else if(a==="rtrial"){acct.plan="trial";acct.since=Date.now();acct.canceled=false;acct.renews=0;saveA();renderAcct("plan");msg("Trial restarted.")}
+    else if(a==="rtrial"){acct.plan="trial";acct.since=Date.now();acct.canceled=false;acct.renews=0;saveA();renderAcct("plan");msg("You're on Free.")}
     else if(a==="exp"){
       download("aply-backup.json","application/json",JSON.stringify({app:"aply",v:1,exported:new Date().toISOString(),profile:A.S.profile,decisions:A.S.decisions,acct:acct}));
     }

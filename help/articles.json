@@ -130,8 +130,8 @@
     {
       "id": "plans",
       "title": "Plans and billing",
-      "tags": "plan plans billing price cost pay subscription free trial plus pro starter upgrade cancel refund limit",
-      "body": "Open Profile, then Plan and billing to see the plans and your usage. In this test version no real payments are taken: choosing a plan only records a test payment and no card is ever asked for. You can cancel or switch there too.",
+      "tags": "plan plans billing price cost pay subscription free plus pro upgrade cancel refund limit weekly applications many",
+      "body": "There are three plans. Free: 50 applications a week. Plus ($9.99 a month): 250 a week, plus extra filters and Message the hiring manager. Pro ($19.99 a month): unlimited applications. Limits count the last 7 days. Open Profile, then Plan and billing to see your usage, switch or cancel. In this test version no real payments are taken: choosing a plan only records a test payment and no card is ever asked for.",
       "go": "prof:plan"
     },
     {
