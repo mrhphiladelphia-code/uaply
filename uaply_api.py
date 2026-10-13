@@ -73,6 +73,9 @@ def config():
 
 def _smtp_ready(cfg):
     s = cfg.get("smtp") or {}
+    pw = s.get("password") if isinstance(s.get("password"), str) else ""
+    if s.get("user") and (not pw.strip() or pw.strip().lower().startswith("a gmail app password")):
+        return False                                    # a login with no real password yet (the example text counts as none)
     return bool(s.get("host") and s.get("from_addr"))
 
 
@@ -301,6 +304,31 @@ def _send_receipt(cfg, to, subject, body):
         if s.get("user"):
             srv.login(s["user"], s.get("password", ""))
         srv.send_message(msg)
+
+
+def send_system_mail(user_id, to, subject, body, secret=False):
+    """Mail UAply itself sends to a person (password reset links). Real email when SMTP is set up (whatever the delivery mode,
+    since that setting is about recruiters), otherwise it lands in the simulated test inbox. `secret` keeps the body out of
+    the stored copy once it was really emailed, so a reset link is never kept after it leaves. Never raises.
+    Returns "sent", "failed" or "delivered_test"."""
+    cfg = config()
+    status = "delivered_test"
+    if _smtp_ready(cfg):
+        try:
+            _send_receipt(cfg, to, subject, body)
+            status = "sent"
+        except Exception:
+            status = "failed"
+    try:
+        auth_api.add_mail(user_id, to, subject, "(the link was emailed and is not kept here)" if secret and status == "sent" else body, status)
+    except Exception:
+        pass
+    return status
+
+
+def mail_ready():
+    """True when UAply can send real email (an SMTP login is configured)."""
+    return _smtp_ready(config())
 
 
 def _receipt(cfg, user, cand, job, note, rec):

@@ -9,6 +9,11 @@
   "support_email": "support@your-domain.example",
   "anthropic_api_key": "optional: your Anthropic API key, or leave this out and set ANTHROPIC_API_KEY in the environment",
   "ai": {"enabled": true, "model": "claude-opus-5-5", "effort": "low", "daily_limit": 300},
+  "google": {
+    "client_id": "paste the Client ID from Google Cloud Console here",
+    "client_secret": "from Google Cloud Console, Credentials, OAuth client (Web application)",
+    "public_url": "https://your-site.example (optional on this computer)"
+  },
   "smtp": {
     "host": "smtp.gmail.com",
     "port": 587,
