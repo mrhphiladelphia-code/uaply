@@ -23,6 +23,7 @@ LEGAL STATUS OF EACH SOURCE (checked October 2026; this is not legal advice, hav
 
 get_jobs() returns {"fetched_at", "sources", "jobs"} where each job already matches the shape the app expects.
 """
+import datetime
 import hashlib
 import html
 import json
@@ -107,6 +108,49 @@ def _text(s):
     return re.sub(r"\s+", " ", s).strip()[:20000]
 
 
+def _ts(v):
+    """Posting date as epoch milliseconds (0 if the feed gives none or an unreadable one)."""
+    try:
+        if isinstance(v, (int, float)):
+            return int(v if v > 1e11 else v * 1000)
+        if isinstance(v, str) and v.strip():
+            d = datetime.datetime.fromisoformat(v.strip().replace("Z", "+00:00"))
+            if d.tzinfo is None:
+                d = d.replace(tzinfo=datetime.timezone.utc)
+            return int(d.timestamp() * 1000)
+    except Exception:
+        pass
+    return 0
+
+
+# Benefits a posting mentions in its own text. A mention is not a guarantee, and silence is not "none": many
+# postings simply do not list benefits, so the app treats these as "mentions", never as proof of absence.
+PERK_RES = [
+    ("health", re.compile(r"health(?:care)? (?:insurance|coverage|benefits|plans?)|medical (?:insurance|coverage|benefits|plans?)|medical,? dental", re.I)),
+    ("dental", re.compile(r"\bdental\b", re.I)),
+    ("vision", re.compile(r"\bvision (?:insurance|coverage|benefits|care|plans?)\b|dental,? (?:and |& )?vision|medical,? dental,? (?:and |&)?vision", re.I)),
+    ("k401", re.compile(r"401\s?\(?k\)?", re.I)),
+    ("match", re.compile(r"401\s?\(?k\)?[^.]{0,80}match|(?:employer|company) match|matching contributions?", re.I)),
+    ("loan", re.compile(r"student loan", re.I)),
+    ("stock", re.compile(r"stock options?|equity (?:grants?|compensation|package)|\bRSUs?\b|\bESPP\b|stock purchase", re.I)),
+    ("pto", re.compile(r"\bPTO\b|paid time off|paid vacation|unlimited (?:vacation|time off)|vacation days", re.I)),
+    ("maternity", re.compile(r"paid (?:maternity|parental)|maternity leave|parental leave", re.I)),
+    ("paternity", re.compile(r"paid (?:paternity|parental)|paternity leave|parental leave", re.I)),
+    ("tuition", re.compile(r"tuition (?:assistance|reimbursement|support)|education(?:al)? (?:assistance|reimbursement)", re.I)),
+]
+
+
+# Postings that say pay is commission only. A heuristic on the posting's own words, not a verified fact.
+COMM_RE = re.compile(r"commission[- ]only|100% commission|straight commission|commission[- ]based (?:pay|compensation|position|role|only)|no base (?:salary|pay)|1099 commission", re.I)
+
+
+PERK_KEYS = [k for k, _ in PERK_RES]
+
+
+def _perks(text):
+    return [k for k, rx in PERK_RES if rx.search(text or "")]
+
+
 def _money(tok):
     tok = tok.replace(",", "").replace(" ", "")
     return int(tok[:-1]) * 1000 if tok[-1] in "kK" else int(tok)
@@ -129,14 +173,15 @@ def _fetch_raw(kind, token, name):
         for j in _get("https://boards-api.greenhouse.io/v1/boards/%s/jobs?content=true" % token).get("jobs", []):
             out.append(dict(id=j["id"], title=j["title"], company=j.get("company_name") or name,
                             loc=(j.get("location") or {}).get("name", ""), remote=None,
-                            text=_text(j.get("content")), url=j["absolute_url"], salary_text=""))
+                            text=_text(j.get("content")), url=j["absolute_url"], salary_text="",
+                            posted=_ts(j.get("first_published") or j.get("updated_at"))))
     elif kind == "lever":
         for j in _get("https://api.lever.co/v0/postings/%s?mode=json" % token):
             cat = j.get("categories") or {}
             out.append(dict(id=j["id"], title=j["text"], company=name, loc=cat.get("location", "") or "",
                             remote=(j.get("workplaceType") == "remote") or None,
                             text=_text((j.get("descriptionPlain") or "") + " " + (j.get("additionalPlain") or "")),
-                            url=j["hostedUrl"], salary_text=""))
+                            url=j["hostedUrl"], salary_text="", posted=_ts(j.get("createdAt"))))
     elif kind == "ashby":
         for j in _get("https://api.ashbyhq.com/posting-api/job-board/%s" % token).get("jobs", []):
             if j.get("isListed") is False:
@@ -144,7 +189,7 @@ def _fetch_raw(kind, token, name):
             out.append(dict(id=j["id"], title=j["title"], company=name, loc=j.get("location", "") or "",
                             remote=bool(j.get("isRemote")) or j.get("workplaceType") == "Remote" or None,
                             text=_text(j.get("descriptionPlain") or j.get("descriptionHtml")),
-                            url=j["jobUrl"], salary_text=""))
+                            url=j["jobUrl"], salary_text="", posted=_ts(j.get("publishedAt"))))
     elif kind == "remotive":
         for j in _get("https://remotive.com/api/remote-jobs?category=%s&limit=60" % token).get("jobs", []):
             loc = j.get("candidate_required_location") or ""
@@ -152,7 +197,7 @@ def _fetch_raw(kind, token, name):
                 continue
             out.append(dict(id=j["id"], title=j["title"], company=j["company_name"], loc="Remote (%s)" % loc, remote=True,
                             text=_text(j.get("description")) + " " + " ".join(j.get("tags") or []),
-                            url=j["url"], salary_text=j.get("salary") or ""))
+                            url=j["url"], salary_text=j.get("salary") or "", posted=_ts(j.get("publication_date"))))
     elif kind == "jobicy":
         data = _get("https://jobicy.com/api/v2/remote-jobs?count=30&geo=usa&industry=%s" % token)
         for j in data.get("jobs", []):
@@ -164,6 +209,7 @@ def _fetch_raw(kind, token, name):
             out.append(dict(id=j["id"], title=j["jobTitle"], company=j["companyName"],
                             loc="Remote (%s)" % re.sub(r"\s+", " ", j.get("jobGeo") or "USA").strip(), remote=True,
                             text=_text(j.get("jobDescription")), url=j["url"], salary_text="", sal=sal,
+                            posted=_ts(j.get("pubDate")),
                             fallback=(j.get("jobIndustry") or [None])[0]))
     elif kind == "muse":
         for page in (1, 2):
@@ -175,7 +221,7 @@ def _fetch_raw(kind, token, name):
                 out.append(dict(id=j["id"], title=j["name"], company=j["company"]["name"], loc=loc or "Not listed",
                                 remote=any(re.search("remote|flexible", l, re.I) for l in locs) or None,
                                 text=_text(j.get("contents")), url=j["refs"]["landing_page"], salary_text="",
-                                fallback=cats[0] if cats else None,
+                                fallback=cats[0] if cats else None, posted=_ts(j.get("publication_date")),
                                 force_type="internship" if token == "Internship" else None))
     return out
 
@@ -201,7 +247,8 @@ def _normalize(raw, kind, name):
         return None
     mode = "remote" if remote else ("hybrid" if re.search(r"hybrid", loc + " " + text[:600], re.I) else "onsite")
     t = title.lower()
-    typ = raw.get("force_type") or ("internship" if re.search(r"\bintern(ship)?\b", t) else ("coop" if re.search(r"co-?op\b", t) else "job"))
+    typ = raw.get("force_type") or ("internship" if re.search(r"\bintern(ship)?\b", t) else ("coop" if re.search(r"co-?op\b", t) else
+                                    ("parttime" if re.search(r"part[- ]time", t + " " + text[:400], re.I) else "job")))
     m = YRS_RE.search(text)
     yrs = min(int(m.group(1)), 15) if m else 0
     edu = "Bachelor" if re.search(r"bachelor|\bB\.?S\.? degree", text, re.I) else "High school"
@@ -211,7 +258,8 @@ def _normalize(raw, kind, name):
     # contact is deliberately empty and apply is "link": a third-party feed never gets an application emailed to anyone
     return dict(id=jid, co=raw["company"], role=title, loc=loc or "Not listed", mode=mode,
                 sal=raw.get("sal") or _salary(raw["salary_text"], text), yrs=yrs, edu=edu, skills=skills, blurb=blurb,
-                type=typ, url=raw["url"], source=src, contact="", apply="link", live=True)
+                type=typ, url=raw["url"], source=src, contact="", apply="link", live=True,
+                posted=raw.get("posted", 0), perks=_perks(text), comm=bool(COMM_RE.search(text)))
 
 
 _refreshing = set()
@@ -278,11 +326,20 @@ def _fetch_source(src):
 
 
 def _cfg():
+    """uaply-config.json, with UAPLY_CONFIG_JSON from the environment on top (same rule as uaply_api.config)."""
+    cfg = {}
     try:
         with open(os.path.join(ROOT, "uaply-config.json"), encoding="utf-8") as f:
-            return json.load(f)
+            cfg.update(json.load(f))
     except Exception:
-        return {}
+        pass
+    try:
+        env = json.loads(os.environ.get("UAPLY_CONFIG_JSON") or "{}")
+        if isinstance(env, dict):
+            cfg.update(env)
+    except ValueError:
+        pass
+    return cfg
 
 
 def feeds_allowed():
@@ -302,8 +359,10 @@ def _clean(v, n):
 def partner_jobs():
     """Jobs from uaply-partners.json (or the placeholder-only partners.example.json). Each employer must record how it
     consented. An employer with a contact address receives applications directly; without one it is link-out only."""
-    path = next((os.path.join(ROOT, n) for n in ("uaply-partners.json", "partners.example.json")
-                 if os.path.exists(os.path.join(ROOT, n))), None)
+    # on a host, keep the real list on the persistent disk (UAPLY_DATA_DIR) so it is never in the repository
+    places = [os.path.join(os.environ["UAPLY_DATA_DIR"], "uaply-partners.json")] if os.environ.get("UAPLY_DATA_DIR") else []
+    places += [os.path.join(ROOT, n) for n in ("uaply-partners.json", "partners.example.json")]
+    path = next((p for p in places if os.path.exists(p)), None)
     if not path:
         return []
     try:
@@ -338,9 +397,13 @@ def partner_jobs():
                 yrs=min(15, max(0, int(j.get("yrs") or 0))) if str(j.get("yrs") or 0).isdigit() else 0,
                 edu=j.get("edu") if j.get("edu") in ("High school", "Associate", "Bachelor", "Master", "Doctorate") else "High school",
                 skills=skills, blurb=_clean(j.get("blurb"), 220),
-                type=j.get("type") if j.get("type") in ("job", "internship", "coop") else "job",
+                type=j.get("type") if j.get("type") in ("job", "parttime", "internship", "coop") else "job",
                 url=url if url.startswith("https://") else "", source="Direct from %s (partner employer)" % name,
-                contact=contact, apply="direct" if contact else "link", partner=True, live=True))
+                contact=contact, apply="direct" if contact else "link", partner=True, live=True,
+                # optional filter data the employer can give: "posted" (a date), "perks" (keys from PERK_RES), "commission_only"
+                posted=_ts(j.get("posted")),
+                perks=sorted(set([p for p in (j.get("perks") or []) if p in PERK_KEYS] + _perks(j.get("blurb") or ""))),
+                comm=j.get("commission_only") is True or bool(COMM_RE.search(j.get("blurb") or ""))))
     _partners.update(path=path, mtime=mtime, jobs=out)
     return out
 

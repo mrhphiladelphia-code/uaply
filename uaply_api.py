@@ -15,11 +15,16 @@ Delivery modes (uaply-config.json, key "delivery"):
 
 Safeguards: explicit consent flag, candidate name and email required, https posting URLs only, one application per
 candidate per job, a daily cap on live sends, size limits, and the server rejects cross-site requests.
+
+Receipts: when the person swiping is signed in (auth_api.py), every new application also produces a receipt addressed
+to their account email. In test mode it is stored in the simulated inbox (shown on /outbox); in live mode with SMTP
+configured it is emailed to them for real.
 """
 import json
 import os
 import re
 import smtplib
+import sys
 import threading
 import time
 import uuid
@@ -30,6 +35,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(ROOT, "data")
 CONFIG_PATH = os.path.join(ROOT, "uaply-config.json")
 import jobs_api
+import auth_api
 
 EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")   # strict: one plain address, no lists or names
 
@@ -38,13 +44,28 @@ APPS = []
 DECISIONS = []
 
 
+def data_root():
+    """Where records live: UAPLY_DATA_DIR on a host (a persistent disk), else ./data next to the code."""
+    return os.environ.get("UAPLY_DATA_DIR") or os.path.join(ROOT, "data")
+
+
 def config():
+    """uaply-config.json, then UAPLY_CONFIG_JSON from the environment on top (how a host passes settings and secrets
+    without a file in the repository), then SUPPORT_EMAIL if set."""
     cfg = {"delivery": "test", "daily_limit": 20, "smtp": {}}
     try:
         with open(CONFIG_PATH, encoding="utf-8") as f:
             cfg.update(json.load(f))
     except Exception:
         pass
+    try:
+        env = json.loads(os.environ.get("UAPLY_CONFIG_JSON") or "{}")
+        if isinstance(env, dict):
+            cfg.update(env)
+    except ValueError:
+        print("UAPLY_CONFIG_JSON is not valid JSON; ignoring it", file=sys.stderr)
+    if os.environ.get("SUPPORT_EMAIL"):
+        cfg["support_email"] = os.environ["SUPPORT_EMAIL"]
     if cfg.get("delivery") not in ("test", "live"):
         cfg["delivery"] = "test"
     return cfg
@@ -95,7 +116,7 @@ def _load():
 def init(instance):
     """Each instance (sandbox, dev) keeps its own records in data/<instance>/."""
     global DATA
-    DATA = os.path.join(ROOT, "data", re.sub(r"[^A-Za-z0-9_-]", "", instance) or "default")
+    DATA = os.path.join(data_root(), re.sub(r"[^A-Za-z0-9_-]", "", instance) or "default")
     APPS.clear()
     DECISIONS.clear()
     _load()
@@ -251,8 +272,60 @@ def _send_owner_copy(cfg, rec):
         return False
 
 
-def submit(p):
-    """Returns (http_status, dict)."""
+def _receipt_text(cand, job, note, rec, user):
+    what = {
+        "delivered_test": "Test mode: your application went to a simulated recruiter inbox. Nothing was sent to %s." % job["co"],
+        "sent": "Your application was emailed to the recruiter at %s. Replies will come to %s." % (rec["to"], cand["email"]),
+        "handoff": "%s takes applications only on its own page. Finish your application here: %s" % (job["co"], job["url"]),
+    }.get(rec["status"], "Status: %s" % rec["status"])
+    subject = "You applied: %s at %s" % (job["role"], job["co"])
+    details = ("Your details, ready for the employer's form:" if rec["status"] == "handoff"
+               else "What the employer receives:" if rec["status"] == "sent" else "What was delivered to the test inbox:")
+    body = ("Hi %s,\n\nYou swiped right on %s at %s%s on UAply.\n\n%s\n\nPosting: %s\nMatch: %d%%\n\n%s\n%s\n\n"
+            "Track it in UAply under Dashboard, Applied.\n\n--\nUAply\nYou get this email because you are signed in as %s."
+            % (cand["name"] or "there", job["role"], job["co"], (" (%s)" % job["loc"]) if job.get("loc") else "", what,
+               job["url"], rec["match"], details, _application_text(cand, job, note), user["email"]))
+    return _s(subject, 200), body
+
+
+def _send_receipt(cfg, to, subject, body):
+    s = cfg["smtp"]
+    msg = EmailMessage()
+    msg["From"] = s["from_addr"]
+    msg["To"] = to
+    msg["Subject"] = subject
+    msg.set_content(body)
+    with smtplib.SMTP(s["host"], int(s.get("port", 587)), timeout=20) as srv:
+        if s.get("starttls", True):
+            srv.starttls()
+        if s.get("user"):
+            srv.login(s["user"], s.get("password", ""))
+        srv.send_message(msg)
+
+
+def _receipt(cfg, user, cand, job, note, rec):
+    """Email the signed-in applicant a copy of what happened. Never raises: a receipt problem must not undo an application."""
+    to = user["email"]
+    subject, body = _receipt_text(cand, job, note, rec, user)
+    status = "delivered_test"
+    if cfg["delivery"] == "live":
+        if _smtp_ready(cfg):
+            try:
+                _send_receipt(cfg, to, subject, body)
+                status = "sent"
+            except Exception:
+                status = "failed"
+        else:
+            status = "not_configured"
+    try:
+        auth_api.add_mail(user["id"], to, subject, body, status)
+    except Exception:
+        pass
+    return {"to": to, "status": status}
+
+
+def submit(p, user=None):
+    """Returns (http_status, dict). `user` is the signed-in account ({id, email}) or None."""
     err = _validate(p)
     if err:
         return 400, {"error": err}
@@ -281,7 +354,8 @@ def submit(p):
             if a["job"]["id"] == job["id"] and a["candidate"]["email"] == cand["email"] and a["status"] != "failed":
                 return 200, {"status": "duplicate", "id": a["id"], "to": a.get("to", ""), "mode": a["mode"]}
         rec = {"id": uuid.uuid4().hex[:12], "at": int(time.time()), "mode": mode, "job": job, "candidate": cand,
-               "note": note, "match": int(p.get("match") or 0), "to": "", "simulated": False, "status": ""}
+               "note": note, "match": int(p.get("match") or 0), "to": "", "simulated": False, "status": "",
+               "user": user["id"] if user else None}
         if policy == "link" or (policy == "unknown" and mode == "live"):
             # a third-party listing, or an example in live mode: UAply never sends an application to anyone here.
             # The person is pointed to the employer's own application page instead.
@@ -325,7 +399,31 @@ def submit(p):
            "copied": _send_owner_copy(cfg, rec) if rec["status"] != "failed" else False}
     if rec.get("error"):
         out["error"] = "The email could not be sent: " + rec["error"]
+    if user and rec["status"] in ("delivered_test", "sent", "handoff"):
+        out["receipt"] = _receipt(cfg, user, cand, job, note, rec)
     return 200, out
+
+
+def forget_user(user_id):
+    """Remove every application record made while signed in as this account (used when the account is deleted)."""
+    if not user_id:
+        return 0
+    with _lock:
+        keep = [a for a in APPS if a.get("user") != user_id]
+        gone = len(APPS) - len(keep)
+        APPS[:] = keep
+        path = os.path.join(DATA, "applications.jsonl")
+        try:
+            if os.path.exists(path):
+                with open(path, encoding="utf-8") as f:
+                    lines = [ln for ln in f if ln.strip() and json.loads(ln).get("user") != user_id]
+                tmp = path + ".tmp"
+                with open(tmp, "w", encoding="utf-8") as f:
+                    f.writelines(lines)
+                os.replace(tmp, path)
+        except Exception:
+            pass
+    return gone
 
 
 def record_decision(p):
@@ -374,6 +472,16 @@ def outbox_html():
                 time.strftime("%b %d, %H:%M", time.localtime(a["at"])),
                 e(c["name"]), e(c["email"]), e(c["title"] or "candidate"), c["years"], a["match"], e(j["url"]), e(_application_text(c, j, a["note"]))))
     body = "".join(rows) or "<p class='m'>No applications yet. Swipe right on a job in the sandbox or dev app.</p>"
+    try:
+        mails = auth_api.mail_list(30)
+    except Exception:
+        mails = []
+    mail_badge = {"delivered_test": "TEST", "sent": "SENT", "failed": "FAILED", "not_configured": "NOT SENT"}
+    receipts = "<h2 style='margin:12px 0 0;font-size:18px'>Receipts to applicants</h2><p class='m'>What signed-in applicants receive at their own email after each swipe right.</p>" + (
+        "".join('<article><header><span class="b">%s</span><b>%s</b> to %s<time>%s</time></header><pre>%s</pre></article>' % (
+            e(mail_badge.get(m["status"], m["status"].upper())), e(m["subject"]), e(m["to_addr"]),
+            time.strftime("%b %d, %H:%M", time.localtime(m["at"])), e(m["body"])) for m in mails)
+        or "<p class='m'>No receipts yet. Sign in to UAply, then swipe right on a job.</p>")
     return ("""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>UAply test inbox</title><style>
 :root{--bg:#FDF0F2;--surface:#FFFFFF;--ink:#2A1218;--muted:#7B5560;--line:#F3DADF;--accent:#C92A55}
@@ -388,4 +496,4 @@ header{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}header time{ma
 pre{white-space:pre-wrap;margin:8px 0 0;font:inherit;background:var(--bg);border-radius:10px;padding:10px}a{color:var(--accent)}
 </style></head><body><main><h1>UAply test inbox</h1><p class="m">Simulated recruiter inbox. In test mode nothing leaves this computer.</p>
 <div class="stats"><div><b>%d</b><small>Swipes right</small></div><div><b>%d</b><small>Swipes left</small></div><div><b>%d</b><small>Applications</small></div><div><b>%d</b><small>Testers</small></div></div>
-%s</main></body></html>""" % (st["right"], st["left"], st["applications"], st["sessions"], body)).encode("utf-8")
+%s%s</main></body></html>""" % (st["right"], st["left"], st["applications"], st["sessions"], body, receipts)).encode("utf-8")

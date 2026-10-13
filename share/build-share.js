@@ -9,7 +9,7 @@ const nav = read("shared/uaply-nav.js");
 const profile = read("shared/uaply-profile.js");
 let envs = read("shared/uaply-envs.js");
 
-const NEEDS_SERVER = ["live", "kit", "submit"];
+const NEEDS_SERVER = ["live", "kit", "submit", "chat"];   // the assistant needs chat_api.py, which a static host cannot run
 envs = envs.replace(/fetch\("prod-index\.html",\{cache:"no-store"\}\)\.then\(function\(r\)\{return r\.text\(\)\}\)/, "Promise.resolve(window.__PROD_SRC)");
 envs = envs.replace(/var ORDER=\[([^\]]*)\];/, (m, list) => {
   const kept = list.split(",").map((s) => s.trim()).filter((s) => !NEEDS_SERVER.includes(s.replace(/"/g, "")));
