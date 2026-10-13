@@ -1,8 +1,37 @@
 {
   "version": "0.0.1",
   "configurations": [
-    {"name": "prod", "runtimeExecutable": "python", "runtimeArgs": ["serve.py", "8765", "prod"], "port": 8765},
-    {"name": "sandbox", "runtimeExecutable": "python", "runtimeArgs": ["serve.py", "8766", "sandbox", "--api"], "port": 8766},
-    {"name": "dev", "runtimeExecutable": "python", "runtimeArgs": ["serve.py", "8767", "dev", "--api"], "port": 8767}
+    {
+      "name": "prod",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "serve.py",
+        "8765",
+        "prod"
+      ],
+      "port": 8765
+    },
+    {
+      "name": "sandbox",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "serve.py",
+        "8766",
+        "sandbox",
+        "--api"
+      ],
+      "port": 8766
+    },
+    {
+      "name": "dev",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "serve.py",
+        "8767",
+        "dev",
+        "--api"
+      ],
+      "port": 8767
+    }
   ]
 }
