@@ -365,7 +365,9 @@ def _cfg():
 def feeds_allowed():
     """Third-party feeds the owner has explicitly switched on (default: none). See the legal notes at the top."""
     f = _cfg().get("feeds")
-    return {x for x in f if isinstance(x, str)} if isinstance(f, list) else set()
+    on = {x for x in f if isinstance(x, str)} if isinstance(f, list) else set()
+    on |= {x.strip().lower() for x in (os.environ.get("UAPLY_FEEDS") or "").split(",") if x.strip()}     # e.g. UAPLY_FEEDS=greenhouse,lever,ashby
+    return on
 
 
 # ---- partner employers: postings an employer gave us and who agreed to receive applications ----
@@ -377,11 +379,12 @@ def _clean(v, n):
 
 
 def partner_jobs():
-    """Jobs from uaply-partners.json (or the placeholder-only partners.example.json). Each employer must record how it
-    consented. An employer with a contact address receives applications directly; without one it is link-out only."""
+    """Jobs from uaply-partners.json. Each employer must record how it consented. An employer with a contact address
+    receives applications directly; without one it is link-out only. partners.example.json is documentation only and is
+    never served as jobs."""
     # on a host, keep the real list on the persistent disk (UAPLY_DATA_DIR) so it is never in the repository
     places = [os.path.join(os.environ["UAPLY_DATA_DIR"], "uaply-partners.json")] if os.environ.get("UAPLY_DATA_DIR") else []
-    places += [os.path.join(ROOT, n) for n in ("uaply-partners.json", "partners.example.json")]
+    places += [os.path.join(ROOT, "uaply-partners.json")]
     path = next((p for p in places if os.path.exists(p)), None)
     if not path:
         return []
@@ -396,8 +399,8 @@ def partner_jobs():
     out = []
     for e in data.get("employers", []) if isinstance(data, dict) else []:
         name, consent = _clean(e.get("name"), 100), _clean(e.get("consent"), 300)
-        if not name or not consent:
-            continue                                   # no recorded consent, no listing
+        if not name or not consent or consent.lower().startswith("placeholder"):
+            continue                                   # no recorded consent (or the example text still in place), no listing
         contact = _clean(e.get("contact"), 120)
         contact = contact if re.match(r"^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$", contact) else ""
         for j in e.get("jobs", []):

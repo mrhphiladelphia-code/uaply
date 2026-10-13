@@ -1,6 +1,7 @@
 // Walks every screen of the sandbox (or dev: PORT=8767) in a headless browser and reports what is missing or throws.
 // node tools/cdp.js tools/ui-sweep.js
 const PORT = process.env.PORT || "8766";
+const REL = process.env.REL === "1";      // the release build (dev): no Plan screen, real jobs only (covered by tools/ui-release.js)
 module.exports = async ({ ev, sleep, nav, logs }) => {
   const F = "document.querySelector('iframe').contentDocument";
   const W = "document.querySelector('iframe').contentWindow";
@@ -51,7 +52,9 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   await sleep(2500);
   const after = JSON.parse(await ev("fetch('/api/outbox').then(r=>r.json()).then(j=>JSON.stringify({n:j.applications.length}))")).n;
   console.log("  applications in inbox before/after:", before, after);
-  check("swipe right created an application in the test inbox", after > before);
+  const newest = await ev("fetch('/api/outbox').then(r=>r.json()).then(j=>(j.applications[0]||{}).status||'')");
+  check(REL ? "swipe right on a real job is recorded as a hand-off to the employer's own page" : "swipe right created an application in the test inbox",
+        REL ? after > before && newest === "handoff" : after > before, "(newest status: " + newest + ")");
   // dashboard
   await ev(F + ".getElementById('nb-dash').click()");
   await sleep(500);
@@ -62,7 +65,7 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   // profile sections
   await ev(F + ".getElementById('nb-prof').click()");
   await sleep(500);
-  for (const t of ["Account", "Settings", "Resume", "Preferences", "Filters", "Plan", "Data"]) {
+  for (const t of ["Account", "Settings", "Resume", "Preferences", "Filters", "Plan", "Data"].filter((x) => !(REL && x === "Plan"))) {
     const ok = await clickText(t);
     await sleep(350);
     const txt = await visibleText();

@@ -37,6 +37,7 @@ module.exports = async ({ ev, sleep, nav, logs, shot }) => {
       await closeOverlays();
       await ev(F + ".getElementById('" + navId + "').click()"); await sleep(350);
       const ok = await ev("(()=>{const e=[...(" + F + ").querySelectorAll('button,a,[role=tab]')].find(b=>b.offsetParent&&b.innerText.split(/\\s+/).join(' ').trim().startsWith(" + JSON.stringify(sub) + "));if(!e)return false;e.click();return true})()");
+      if (!ok && process.env.REL === "1" && sub === "Plan") { console.log("  Profile > Plan: not in the release build (as intended)"); await ev(F + ".getElementById('" + navId + "').click()"); await sleep(200); continue; }
       if (!ok) { note("MISSING", where, "sub-menu item not found"); continue; }
       await sleep(500);
       await overflow(where); await tiny(where);

@@ -58,6 +58,25 @@ try {
   ok("patched app assembles and parses");
 } catch (e) { bad("patching the production page failed: " + e.message); }
 
+console.log("Release build (dev)");
+{
+  const dev = fs.readFileSync("dev/index.html", "utf8");
+  /release:\s*true/.test(dev) ? ok("dev/index.html is flagged as the release build") : bad("dev/index.html lost release:true (the developer bar, simulated sign-in and paid plans would show to users)");
+  /<div class="bar" id="devbar" hidden>/.test(dev) ? ok("the developer bar is hidden") : bad("the DEV bar is no longer hidden in dev/index.html");
+  /<title>UAply<\/title>/.test(dev) ? ok("the tab title is UAply") : bad("dev/index.html title should be exactly UAply");
+  const art = JSON.parse(fs.readFileSync("help/articles.json", "utf8")).articles;
+  const plans = art.find((a) => a.id === "plans");
+  plans && plans.release && plans.release.hide ? ok("the assistant's plans article is hidden in the release build") : bad("help/articles.json: the plans article must carry release.hide");
+}
+
+console.log("Python lint (pyflakes, when installed)");
+{
+  const r = spawnSync("python", ["-m", "pyflakes", "."], { encoding: "utf8" });
+  if (/No module named pyflakes/.test((r.stderr || "") + (r.stdout || ""))) console.log("  skip  pyflakes is not installed (pip install pyflakes)");
+  else if (r.status === 0) ok("no unused imports, undefined names or other pyflakes findings");
+  else bad("pyflakes found problems:\n" + (r.stdout || r.stderr).slice(0, 1500));
+}
+
 console.log("Hosted copies build");
 const b = spawnSync(process.execPath, ["share/build-share.js", "--full"], { encoding: "utf8" });
 b.status === 0 ? ok("share/build-share.js --full") : bad("build failed\n" + b.stderr);
