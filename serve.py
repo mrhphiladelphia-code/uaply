@@ -11,6 +11,11 @@ Serves ROOT; each urlpath=file alias maps one URL to a file outside ROOT (e.g. /
   POST /api/auth/login    sign in
   POST /api/auth/logout   sign out
   POST /api/auth/delete   delete the signed-in account (password required, or typing DELETE for a Google-only account)
+  POST /api/auth/forgot   email a password reset link (the answer never says whether the email has an account)
+  POST /api/auth/reset    set a new password from a reset link
+  POST /api/auth/change-password   signed in: change the password (needs the current one)
+  GET  /setup             owner checklist: Google keys, email login, test email (setup_api.py)
+  POST /api/setup/test-mail   send the owner one test email
   GET  /api/auth/providers      which sign-in methods are on (google_auth.py)
   GET  /api/auth/google/start   "Continue with Google": send the browser to Google
   GET  /api/auth/google/callback  Google returns here; signs the person in and goes back to the app
@@ -28,7 +33,7 @@ BIND = os.environ.get("HOST", "127.0.0.1")
 PUBLIC = BIND not in ("127.0.0.1", "localhost", "::1")
 # Owner-only pages (/outbox, /feedback) need this password when the server is public. Without it they are switched off.
 OWNER_PASSWORD = os.environ.get("OWNER_PASSWORD", "")
-OWNER_PAGES = ("/outbox", "/api/outbox", "/feedback")
+OWNER_PAGES = ("/outbox", "/api/outbox", "/feedback", "/setup")
 root = os.path.abspath(sys.argv[2])
 rest = sys.argv[3:]
 api = "--api" in rest
@@ -47,7 +52,7 @@ if api:
                      ("/uaply-chat.js", "shared/uaply-chat.js"), ("/help/articles.json", "help/articles.json"),
                      ("/prod-index.html", "prod/index.html")):
         alias.setdefault(url, os.path.join(HERE, rel))
-    import jobs_api, uaply_api, auth_api, chat_api, google_auth
+    import jobs_api, uaply_api, auth_api, chat_api, google_auth, setup_api
     uaply_api.init(os.path.basename(root))
     auth_api.init(os.path.basename(root))
     chat_api.init(os.path.basename(root))
@@ -93,6 +98,16 @@ class H(http.server.SimpleHTTPRequestHandler):
     def _origin_parts(self):
         host = self.headers.get("Host") or "localhost"
         return host, ("https" if self.headers.get("X-Forwarded-Proto") == "https" else "http")
+
+    def _site_base(self):
+        """The public address of this site, for links in emails."""
+        cfg = uaply_api.config()
+        g = cfg.get("google") if isinstance(cfg.get("google"), dict) else {}
+        for v in (cfg.get("public_url"), g.get("public_url")):
+            if isinstance(v, str) and v.startswith(("http://", "https://")):
+                return v.rstrip("/")
+        host, proto = self._origin_parts()
+        return "%s://%s" % (proto, host)
 
     def _redirect(self, where, headers=()):
         self.send_response(302)
@@ -168,6 +183,8 @@ class H(http.server.SimpleHTTPRequestHandler):
                     return self._send(200, chat_api.public_config())
                 if p == "/feedback":
                     return self._send(200, chat_api.feedback_html(), "text/html; charset=utf-8")
+                if p == "/setup":
+                    return self._send(200, setup_api.page(*self._origin_parts()), "text/html; charset=utf-8")
             except Exception as e:
                 return self._send(502, {"error": str(e)[:100]})
         super().do_GET()
@@ -175,7 +192,8 @@ class H(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         p = self.path.split("?", 1)[0]
         if not api or p not in ("/api/apply", "/api/decision", "/api/auth/signup", "/api/auth/login", "/api/auth/logout",
-                                "/api/auth/delete", "/api/chat", "/api/feedback"):
+                                "/api/auth/delete", "/api/auth/forgot", "/api/auth/reset", "/api/auth/change-password",
+                                "/api/setup/test-mail", "/api/chat", "/api/feedback"):
             return self._send(404, {"error": "not found"})
         # Only accept requests made by this site's own pages (blocks cross-site forms and scripts).
         origin = self.headers.get("Origin")
@@ -202,6 +220,29 @@ class H(http.server.SimpleHTTPRequestHandler):
             if p == "/api/auth/login":
                 code, out, token = auth_api.login(payload.get("email"), payload.get("password"), ip)
                 return self._send(code, out, headers=self._cookie(token) if token else ())
+            if p == "/api/setup/test-mail":
+                if not self._owner_ok():
+                    return self._send(403, {"error": "Owner pages are off or need the owner password."})
+                code, out = setup_api.test_mail()
+                return self._send(code, out)
+            if p == "/api/auth/forgot":
+                code, out, mail = auth_api.request_reset(payload.get("email"), ip)
+                if mail:
+                    uid, addr, tok = mail
+                    link = self._site_base() + "/?reset=" + tok
+                    body = ("Hi,\n\nSomeone asked to reset the password for this UAply account. Use this link within one hour:\n\n%s\n\n"
+                            "If you did not ask for this, ignore this email; your password has not changed.\n\n--\nUAply") % link
+                    status = uaply_api.send_system_mail(uid, addr, "Reset your UAply password", body, secret=True)
+                    out = dict(out, delivery=status)
+                else:
+                    out = dict(out, delivery=("sent" if uaply_api.mail_ready() else "delivered_test"))
+                return self._send(code, out)
+            if p == "/api/auth/reset":
+                code, out = auth_api.reset_password(payload.get("token"), payload.get("password"), ip)
+                return self._send(code, out, headers=self._cookie("") if code == 200 else ())
+            if p == "/api/auth/change-password":
+                code, out = auth_api.change_password(self._token(), payload.get("current"), payload.get("password"), ip)
+                return self._send(code, out)
             if p == "/api/auth/logout":
                 auth_api.logout(self._token())
                 return self._send(200, {"ok": True}, headers=self._cookie(""))

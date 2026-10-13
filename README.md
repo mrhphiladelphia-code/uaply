@@ -84,3 +84,19 @@ Accounts work with email and password out of the box. To also offer "Continue wi
 
 Without those keys the Google button is hidden. `python tools/mock-google.py` and `python tools/test-google.py` test the whole flow
 without a Google account; `node tools/cdp.js tools/ui-sweep.js` walks every screen in a headless browser.
+
+## Setup checklist and password reset
+
+Open `http://localhost:8766/setup` (owner only) to see what is on and what still needs a key: Google sign-in, email sending,
+the copy of every application to you, and the optional AI assistant. It also has a "Send test email" button.
+
+To add the keys without typing them anywhere public, run `python tools/setup-config.py`. It asks for the Google client ID and
+secret, the Gmail address that sends UAply email and its App Password (typed hidden), and your own email, then saves them in the
+git-ignored `uaply-config.json`. Restart the server afterwards.
+
+Password reset works end to end: Log in screen, Forgot password?, a one-hour single-use link by email, then a new password
+(which signs out every device). Signed-in people can also change their password. Until email sending is set up, reset emails
+land in the test inbox at `/outbox` instead of reaching real people.
+
+Tests: `python tools/test-reset.py`, `python tools/test-google.py` (with `tools/mock-google.py`), `node tools/cdp.js tools/ui-reset.js`
+and `node tools/cdp.js tools/ui-sweep.js`.

@@ -66,7 +66,7 @@ def redirect_uri(host, proto="http"):
 
 
 def public_config(host, proto="http"):
-    return {"google": enabled(), "googleRedirectUri": redirect_uri(host, proto) if enabled() else ""}
+    return {"google": enabled(), "googleRedirectUri": redirect_uri(host, proto) if enabled() else "", "canEmail": uaply_api.mail_ready()}
 
 
 def _b64(data):

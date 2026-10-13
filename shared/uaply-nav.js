@@ -1213,24 +1213,55 @@ function apply(w,host){
   }).catch(function(){SRV.up=false;paintHeader()});
   w.fetch("/api/apply/config").then(function(r){return r.ok?r.json():null}).then(function(j){if(j&&j.mode)SRV.mode=j.mode}).catch(function(){});
   w.fetch("/api/auth/providers").then(function(r){return r.ok?r.json():null}).then(function(j){
-    SRV.google=!!(j&&j.google);
+    SRV.google=!!(j&&j.google);SRV.canEmail=!!(j&&j.canEmail);
     if(SRV.google&&!acctSec.hidden&&sub.prof==="account")renderAcct("account");
   }).catch(function(){});
   var GERR={agree:"Tick the box to confirm you are 18 or older and agree to the Terms and Privacy Policy, then try Google again.",cancelled:"Google sign-in was cancelled.",expired:"That Google sign-in expired or could not be checked. Try again.",failed:"Google sign-in did not work. Try again, or use your email and password.",unverified:"Google says that email address is not verified, so UAply cannot use it.",off:"Google sign-in is not switched on."};
   function googleReturn(){
     var tp=null,q=null;
     try{tp=w.top;q=new w.URLSearchParams(tp.location.search)}catch(e){return}
-    var er=q.get("auth_error"),ok=q.get("signed_in");
+    var er=q.get("auth_error"),ok=q.get("signed_in"),rt=q.get("reset");
+    if(rt&&/^[A-Za-z0-9_-]{20,100}$/.test(rt)){
+      AUI.reset=rt;
+      try{tp.history.replaceState(null,"",tp.location.pathname)}catch(e){}
+      sub.prof="account";cur="prof";go("prof");renderAcct("account");
+      msg("Choose a new password to finish the reset.");
+      return;
+    }
     if(!er&&!ok)return;
     try{tp.history.replaceState(null,"",tp.location.pathname)}catch(e){}
     sub.prof="account";cur="prof";go("prof");renderAcct("account");
     msg(er?(GERR[er]||GERR.failed):"Signed in with Google.");
   }
   w.__uaplyAuth=function(){return {up:SRV.up,user:SRV.user}};
+  function forgotHTML(){
+    var box='<div class="plan" style="display:flex;flex-direction:column;gap:10px">';
+    if(AUI.forgotSent)return box+'<b>Check your email</b><p class="note" style="margin:0">If that email has an account, a reset link is on its way. It works for one hour.</p>'+
+      (SRV.canEmail?'':'<p class="note" style="margin:0">Test mode: no real email is sent. The link is in the <a href="/outbox" target="_blank" rel="noopener noreferrer">test inbox</a>.</p>')+
+      '<div class="acts"><button type="button" class="btn ghost" data-auth="sforgotback">Back to log in</button></div></div>';
+    return box+'<b>Reset your password</b><div class="field"><label for="sFEmail">Email</label><input type="text" id="sFEmail" inputmode="email" autocomplete="email" maxlength="200" placeholder="you@gmail.com"><small>We email you a link that works for one hour.</small></div>'+
+      '<div class="acts"><button type="button" class="btn" data-auth="sforgotgo">Email me a reset link</button><button type="button" class="btn ghost" data-auth="sforgotback">Back to log in</button></div></div>';
+  }
+  function resetHTML(){
+    return '<div class="plan" style="display:flex;flex-direction:column;gap:10px"><b>Choose a new password</b>'+
+      '<div class="field"><label for="sRPw">New password</label><input type="password" id="sRPw" autocomplete="new-password" maxlength="128"><small>At least 8 characters.</small></div>'+
+      '<div class="field"><label for="sRPw2">Confirm new password</label><input type="password" id="sRPw2" autocomplete="new-password" maxlength="128"></div>'+
+      '<div class="acts"><button type="button" class="btn" data-auth="sresetgo">Save new password</button><button type="button" class="btn ghost" data-auth="sresetno">Cancel</button></div></div>';
+  }
+  function changeHTML(){
+    if(!SRV.user||SRV.user.hasPassword===false)return '<p class="note" style="margin:0">You sign in with Google. To also sign in with a password, log out and use Forgot password with this email.</p>';
+    if(!AUI.chgOpen)return '<div class="acts"><button type="button" class="btn ghost" data-auth="schg">Change password</button></div>';
+    return '<div class="field"><label for="sCur">Current password</label><input type="password" id="sCur" autocomplete="current-password" maxlength="128"></div>'+
+      '<div class="field"><label for="sNew">New password</label><input type="password" id="sNew" autocomplete="new-password" maxlength="128"><small>At least 8 characters. Your other devices are signed out.</small></div>'+
+      '<div class="field"><label for="sNew2">Confirm new password</label><input type="password" id="sNew2" autocomplete="new-password" maxlength="128"></div>'+
+      '<div class="acts"><button type="button" class="btn" data-auth="schgo">Save new password</button><button type="button" class="btn ghost" data-auth="schgno">Cancel</button></div>';
+  }
   function serverHTML(){
+    if(!SRV.user&&AUI.reset)return resetHTML();
+    if(!SRV.user&&AUI.forgot&&AUI.sMode==="in")return forgotHTML();
     if(SRV.user)return '<div class="plan" style="display:flex;flex-direction:column;gap:8px"><span class="tag" style="background:var(--accent);color:var(--accent-ink)">ACCOUNT</span><b>You are signed in</b><small>'+E(SRV.user.email)+' · saved on UAply\'s server</small>'+
       '<p class="note" style="margin:0">Every time you swipe right, a receipt goes to this email'+(SRV.mode==="live"?'':' (test mode: it lands in the <a href="/outbox" target="_blank" rel="noopener noreferrer">test inbox</a> instead)')+'.</p>'+
-      '<div class="acts"><button type="button" class="btn ghost" data-auth="sout">Sign out</button><button type="button" class="btn ghost" data-auth="sdel">Delete account</button></div>'+
+      '<div class="acts"><button type="button" class="btn ghost" data-auth="sout">Sign out</button><button type="button" class="btn ghost" data-auth="sdel">Delete account</button></div>'+changeHTML()+
       (AUI.delOpen?'<div class="field"><label for="sDelPw">'+(SRV.user.hasPassword===false?'Type DELETE to delete your account':'Enter your password to delete your account')+'</label><input type="'+(SRV.user.hasPassword===false?'text':'password')+'" id="sDelPw" autocomplete="'+(SRV.user.hasPassword===false?'off':'current-password')+'" maxlength="128"><small>This removes your account, your receipts and your application records on UAply\'s server. It cannot be undone. Your profile on this device stays until you delete it in Data and privacy.</small></div>'+
         '<div class="acts"><button type="button" class="btn" data-auth="sdelgo">Delete my account</button><button type="button" class="btn ghost" data-auth="sdelno">Keep my account</button></div>':'')+
       '</div>';
@@ -1240,7 +1271,7 @@ function apply(w,host){
       '<div class="field"><label for="sPw">Password</label><input type="password" id="sPw" autocomplete="'+(up?"new-password":"current-password")+'" maxlength="128">'+(up?'<small>At least 8 characters.</small>':'')+'</div>'+
       (up?'<div class="field"><label for="sPw2">Confirm password</label><input type="password" id="sPw2" autocomplete="new-password" maxlength="128"></div>'+
         '<div class="checks"><label><input type="checkbox" id="sAgree"> I am 18 or older and agree to the <a href="'+LB+'terms.html" target="_blank" rel="noopener noreferrer">Terms</a> and <a href="'+LB+'privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a></label></div>':'')+
-      '<div class="acts"><button type="button" class="btn" data-auth="ssubmit">'+(up?"Create account":"Log in")+'</button><button type="button" class="btn ghost" data-auth="smode">'+(up?"I already have an account":"Create an account")+'</button></div>'+
+      '<div class="acts"><button type="button" class="btn" data-auth="ssubmit">'+(up?"Create account":"Log in")+'</button><button type="button" class="btn ghost" data-auth="smode">'+(up?"I already have an account":"Create an account")+'</button>'+(up?'':'<button type="button" class="btn ghost" data-auth="sforgot">Forgot password?</button>')+'</div>'+
       '<small>Your account is stored on UAply\'s server. Passwords are scrambled (hashed) and never stored as typed. Once you are signed in, each swipe right emails you a receipt.</small>'+
       (SRV.google?'<p class="note" style="text-align:center;margin:0">or</p><div class="checks"><label><input type="checkbox" id="gAgree"> I am 18 or older and agree to the <a href="'+LB+'terms.html" target="_blank" rel="noopener noreferrer">Terms</a> and <a href="'+LB+'privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a> (needed the first time)</label></div><div class="acts"><button type="button" class="btn" data-auth="gsign" style="width:100%">Continue with Google</button></div><small>You sign in on Google\'s own page. UAply never sees your Google password, only your verified email.</small>':'')+'</div>';
   }
@@ -1313,6 +1344,48 @@ function apply(w,host){
         if(!r.ok){msg((r.j&&r.j.error)||"Could not delete the account. Try again.");return}
         SRV.user=null;AUI.delOpen=false;paintHeader();renderAcct("account");
         msg("Your account was deleted"+(r.j.applicationsRemoved?", along with "+r.j.applicationsRemoved+" application record"+(r.j.applicationsRemoved===1?"":"s")+" on the server":"")+".");
+      });
+      return;
+    }
+    if(a==="sforgot"){AUI.forgot=true;AUI.forgotSent=false;renderAcct("account");return}
+    if(a==="sforgotback"){AUI.forgot=false;AUI.forgotSent=false;renderAcct("account");return}
+    if(a==="sforgotgo"){
+      var fem=val("sFEmail").toLowerCase();
+      if(!EMAIL_RE.test(fem)){msg("Enter a valid email address.");return}
+      b.disabled=true;msg("Sending…");
+      apiPost("/api/auth/forgot",{email:fem}).then(function(r){
+        b.disabled=false;
+        if(!r.ok){msg((r.j&&r.j.error)||"Something went wrong. Try again.");return}
+        AUI.forgotSent=true;renderAcct("account");
+      });
+      return;
+    }
+    if(a==="sresetno"){AUI.reset="";renderAcct("account");return}
+    if(a==="sresetgo"){
+      var rp=(d.getElementById("sRPw")||{}).value||"";
+      if(rp.length<8){msg("Use at least 8 characters.");return}
+      if(rp!==((d.getElementById("sRPw2")||{}).value||"")){msg("The passwords do not match.");return}
+      b.disabled=true;msg("Saving…");
+      apiPost("/api/auth/reset",{token:AUI.reset,password:rp}).then(function(r){
+        b.disabled=false;
+        if(!r.ok){msg((r.j&&r.j.error)||"Could not reset the password. Ask for a new link.");return}
+        AUI.reset="";AUI.forgot=false;AUI.sMode="in";SRV.user=null;paintHeader();renderAcct("account");
+        msg("Password changed. Log in with your new password.");
+      });
+      return;
+    }
+    if(a==="schg"){AUI.chgOpen=true;renderAcct("account");return}
+    if(a==="schgno"){AUI.chgOpen=false;renderAcct("account");return}
+    if(a==="schgo"){
+      var cp=(d.getElementById("sCur")||{}).value||"",np=(d.getElementById("sNew")||{}).value||"";
+      if(!cp){msg("Enter your current password.");return}
+      if(np.length<8){msg("Use at least 8 characters.");return}
+      if(np!==((d.getElementById("sNew2")||{}).value||"")){msg("The new passwords do not match.");return}
+      b.disabled=true;msg("Saving…");
+      apiPost("/api/auth/change-password",{current:cp,password:np}).then(function(r){
+        b.disabled=false;
+        if(!r.ok){msg((r.j&&r.j.error)||"Could not change the password.");return}
+        AUI.chgOpen=false;renderAcct("account");msg("Password changed.");
       });
       return;
     }

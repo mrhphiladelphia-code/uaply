@@ -5,6 +5,7 @@ Where it keeps things: a SQLite file at data/<instance>/uaply.db (git-ignored, n
   sessions   hashed session tokens with an expiry
   user_mail  the receipts UAply sends to applicants (simulated in test mode)
   identities "Continue with Google" logins: provider + the provider's stable user id, linked to a user
+  password_resets  hashed one-time "forgot password" tokens (1 hour, single use)
 
 How it keeps them safe:
   * Passwords are never stored. Only a per-user random salt and a PBKDF2-HMAC-SHA256 hash (600,000 rounds).
@@ -18,7 +19,10 @@ Sign-up requires confirming the person is 18 or older and accepts the Terms and 
 Deleting an account needs the password again and removes the user, their sessions and their receipts; the server
 also forgets their application records (see uaply_api.forget_user). App stores require in-app deletion.
 
-Not built yet: email verification and password reset. A hosted database (instead of this file) is the production
+Password reset: request_reset() emails a one-hour, single-use link; reset_password() sets the new password, ends every
+session of that account and works for Google-only accounts too (it then gains a password).
+
+Not built yet: email verification at sign-up. A hosted database (instead of this file) is the production
 step: this module is the local stand-in that already behaves like one.
 """
 import hashlib
@@ -42,6 +46,8 @@ _path = ""
 _name = "default"
 _fails = {}      # (ip, email) -> [timestamps of recent failed logins]
 _signups = {}    # ip -> [timestamps of recent sign-ups]
+_resets = {}     # ip or email -> [timestamps of recent reset requests]
+RESET_SECONDS = 3600
 _DUMMY_SALT = b"\x00" * 16
 
 
@@ -86,6 +92,10 @@ def init(instance):
             email TEXT NOT NULL,
             created_at INTEGER NOT NULL,
             PRIMARY KEY(provider, subject))""")
+        c.execute("""CREATE TABLE IF NOT EXISTS password_resets(
+            token_hash TEXT PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            expires_at INTEGER NOT NULL)""")
         for col in ("terms_at INTEGER", "has_password INTEGER NOT NULL DEFAULT 1"):      # databases made before these columns existed
             try:
                 c.execute("ALTER TABLE users ADD COLUMN " + col)
@@ -273,3 +283,91 @@ def oauth_login(provider, subject, email, agree=False):
             c.execute("UPDATE users SET last_login=? WHERE id=?", (now, row["id"]))
             token = _new_session(c, row["id"])
     return None, public_user(row), token
+
+
+def _check_new_password(password, email=""):
+    if not isinstance(password, str) or not (8 <= len(password) <= 128):
+        return "Use a password between 8 and 128 characters."
+    if email and password.lower() == email:
+        return "Your password cannot be your email."
+    return ""
+
+
+def request_reset(email, ip):
+    """Start a password reset. Always answers the same way so nobody can use this to find out who has an account.
+    Returns (status, body, mail) where mail is (user_id, email, token) when a link should be sent, else None."""
+    ok = (200, {"ok": True, "message": "If that email has an account, a reset link is on its way. It works for one hour."})
+    email = _clean_email(email)
+    if not email:
+        return 400, {"error": "Enter a valid email address."}, None
+    with _lock:
+        if len(_recent(_resets, ip, 3600)) >= 6 or len(_recent(_resets, email, 3600)) >= 3:
+            return 429, {"error": "Too many reset requests. Try again in an hour."}, None
+        _resets[ip].append(time.time())
+        _resets[email].append(time.time())
+        with _db() as c:
+            row = c.execute("SELECT id FROM users WHERE email=?", (email,)).fetchone()
+            if not row:
+                return ok[0], ok[1], None
+            token = secrets.token_urlsafe(32)
+            now = int(time.time())
+            c.execute("DELETE FROM password_resets WHERE expires_at < ? OR user_id=?", (now, row["id"]))
+            c.execute("INSERT INTO password_resets(token_hash, user_id, expires_at) VALUES(?,?,?)",
+                      (hashlib.sha256(token.encode()).hexdigest(), row["id"], now + RESET_SECONDS))
+    return ok[0], ok[1], (row["id"], email, token)
+
+
+def reset_password(token, new_password, ip):
+    """Use a reset link. Returns (status, body). Every session of the account is ended."""
+    err = _check_new_password(new_password)
+    if err:
+        return 400, {"error": err}
+    if not isinstance(token, str) or not (20 <= len(token) <= 100):
+        return 400, {"error": "That reset link is not valid. Ask for a new one."}
+    key = (ip, "reset")
+    with _lock:
+        if len(_recent(_fails, key, FAIL_WINDOW)) >= MAX_FAILS:
+            return 429, {"error": "Too many tries. Wait a few minutes and try again."}
+        th = hashlib.sha256(token.encode()).hexdigest()
+        with _db() as c:
+            row = c.execute("SELECT r.user_id, u.email FROM password_resets r JOIN users u ON u.id=r.user_id "
+                            "WHERE r.token_hash=? AND r.expires_at>?", (th, int(time.time()))).fetchone()
+        if not row:
+            _fails[key].append(time.time())
+            return 400, {"error": "That reset link has expired or was already used. Ask for a new one."}
+        if new_password.lower() == row["email"]:
+            return 400, {"error": "Your password cannot be your email."}
+        salt = secrets.token_bytes(16)
+        pw_hash = _hash(new_password, salt)
+        with _db() as c:
+            c.execute("UPDATE users SET salt=?, hash=?, has_password=1 WHERE id=?", (salt, pw_hash, row["user_id"]))
+            c.execute("DELETE FROM password_resets WHERE user_id=?", (row["user_id"],))
+            c.execute("DELETE FROM sessions WHERE user_id=?", (row["user_id"],))
+    return 200, {"ok": True, "email": row["email"]}
+
+
+def change_password(token, current, new_password, ip):
+    """Signed-in change: needs the current password. Other sessions end; this one stays. Returns (status, body)."""
+    user = user_for(token)
+    if not user:
+        return 401, {"error": "You are not signed in."}
+    if not user["hasPassword"]:
+        return 400, {"error": "This account signs in with Google. Use Forgot password to add a password."}
+    err = _check_new_password(new_password, user["email"])
+    if err:
+        return 400, {"error": err}
+    key = (ip, user["email"])
+    with _lock:
+        if len(_recent(_fails, key, FAIL_WINDOW)) >= MAX_FAILS:
+            return 429, {"error": "Too many tries. Wait a few minutes and try again."}
+        with _db() as c:
+            row = c.execute("SELECT * FROM users WHERE id=?", (user["id"],)).fetchone()
+        if not isinstance(current, str) or not hmac.compare_digest(_hash(current, bytes(row["salt"])), bytes(row["hash"])):
+            _fails[key].append(time.time())
+            return 401, {"error": "Your current password is not right."}
+        salt = secrets.token_bytes(16)
+        keep = hashlib.sha256(token.encode()).hexdigest()
+        with _db() as c:
+            c.execute("UPDATE users SET salt=?, hash=? WHERE id=?", (salt, _hash(new_password, salt), user["id"]))
+            c.execute("DELETE FROM sessions WHERE user_id=? AND token_hash<>?", (user["id"], keep))
+    return 200, {"ok": True}
