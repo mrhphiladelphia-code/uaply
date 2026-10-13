@@ -24,6 +24,7 @@ import json
 import os
 import re
 import smtplib
+import sys
 import threading
 import time
 import uuid
@@ -43,13 +44,28 @@ APPS = []
 DECISIONS = []
 
 
+def data_root():
+    """Where records live: UAPLY_DATA_DIR on a host (a persistent disk), else ./data next to the code."""
+    return os.environ.get("UAPLY_DATA_DIR") or os.path.join(ROOT, "data")
+
+
 def config():
+    """uaply-config.json, then UAPLY_CONFIG_JSON from the environment on top (how a host passes settings and secrets
+    without a file in the repository), then SUPPORT_EMAIL if set."""
     cfg = {"delivery": "test", "daily_limit": 20, "smtp": {}}
     try:
         with open(CONFIG_PATH, encoding="utf-8") as f:
             cfg.update(json.load(f))
     except Exception:
         pass
+    try:
+        env = json.loads(os.environ.get("UAPLY_CONFIG_JSON") or "{}")
+        if isinstance(env, dict):
+            cfg.update(env)
+    except ValueError:
+        print("UAPLY_CONFIG_JSON is not valid JSON; ignoring it", file=sys.stderr)
+    if os.environ.get("SUPPORT_EMAIL"):
+        cfg["support_email"] = os.environ["SUPPORT_EMAIL"]
     if cfg.get("delivery") not in ("test", "live"):
         cfg["delivery"] = "test"
     return cfg
@@ -100,7 +116,7 @@ def _load():
 def init(instance):
     """Each instance (sandbox, dev) keeps its own records in data/<instance>/."""
     global DATA
-    DATA = os.path.join(ROOT, "data", re.sub(r"[^A-Za-z0-9_-]", "", instance) or "default")
+    DATA = os.path.join(data_root(), re.sub(r"[^A-Za-z0-9_-]", "", instance) or "default")
     APPS.clear()
     DECISIONS.clear()
     _load()

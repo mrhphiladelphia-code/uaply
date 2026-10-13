@@ -326,11 +326,20 @@ def _fetch_source(src):
 
 
 def _cfg():
+    """uaply-config.json, with UAPLY_CONFIG_JSON from the environment on top (same rule as uaply_api.config)."""
+    cfg = {}
     try:
         with open(os.path.join(ROOT, "uaply-config.json"), encoding="utf-8") as f:
-            return json.load(f)
+            cfg.update(json.load(f))
     except Exception:
-        return {}
+        pass
+    try:
+        env = json.loads(os.environ.get("UAPLY_CONFIG_JSON") or "{}")
+        if isinstance(env, dict):
+            cfg.update(env)
+    except ValueError:
+        pass
+    return cfg
 
 
 def feeds_allowed():
@@ -350,8 +359,10 @@ def _clean(v, n):
 def partner_jobs():
     """Jobs from uaply-partners.json (or the placeholder-only partners.example.json). Each employer must record how it
     consented. An employer with a contact address receives applications directly; without one it is link-out only."""
-    path = next((os.path.join(ROOT, n) for n in ("uaply-partners.json", "partners.example.json")
-                 if os.path.exists(os.path.join(ROOT, n))), None)
+    # on a host, keep the real list on the persistent disk (UAPLY_DATA_DIR) so it is never in the repository
+    places = [os.path.join(os.environ["UAPLY_DATA_DIR"], "uaply-partners.json")] if os.environ.get("UAPLY_DATA_DIR") else []
+    places += [os.path.join(ROOT, n) for n in ("uaply-partners.json", "partners.example.json")]
+    path = next((p for p in places if os.path.exists(p)), None)
     if not path:
         return []
     try:

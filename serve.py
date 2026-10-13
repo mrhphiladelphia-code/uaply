@@ -17,9 +17,15 @@ Serves ROOT; each urlpath=file alias maps one URL to a file outside ROOT (e.g. /
   GET  /feedback          the feedback summary page (this server only listens on this computer)
   GET  /help/articles.json  the help articles the assistant answers from
 Accounts use an HttpOnly session cookie. When a signed-in user swipes right, a receipt goes to their email."""
-import sys, os, json, http.server, http.cookies
+import sys, os, json, http.server, http.cookies, base64, hmac
 
 port = int(sys.argv[1])
+# Locally the server only listens on this computer. A host sets HOST=0.0.0.0 so the public can reach it (always behind HTTPS).
+BIND = os.environ.get("HOST", "127.0.0.1")
+PUBLIC = BIND not in ("127.0.0.1", "localhost", "::1")
+# Owner-only pages (/outbox, /feedback) need this password when the server is public. Without it they are switched off.
+OWNER_PASSWORD = os.environ.get("OWNER_PASSWORD", "")
+OWNER_PAGES = ("/outbox", "/api/outbox", "/feedback")
 root = os.path.abspath(sys.argv[2])
 rest = sys.argv[3:]
 api = "--api" in rest
@@ -81,8 +87,27 @@ class H(http.server.SimpleHTTPRequestHandler):
         age = auth_api.SESSION_SECONDS if token else 0
         return [("Set-Cookie", "%s=%s; HttpOnly; SameSite=Lax; Path=/; Max-Age=%d%s" % (auth_api.cookie_name(), token, age, secure))]
 
+    def _owner_ok(self):
+        """Owner pages: open on this computer; on a public server only with OWNER_PASSWORD (any username)."""
+        if not PUBLIC:
+            return True
+        if not OWNER_PASSWORD:
+            return False
+        try:
+            kind, val = (self.headers.get("Authorization") or "").split(" ", 1)
+            pw = base64.b64decode(val).decode("utf-8").split(":", 1)[1] if kind == "Basic" else ""
+        except Exception:
+            pw = ""
+        return hmac.compare_digest(pw.encode(), OWNER_PASSWORD.encode())
+
     def do_GET(self):
         p = self.path.split("?", 1)[0]
+        if p == "/healthz":                                                 # for the host's health check
+            return self._send(200, {"ok": True})
+        if api and p in OWNER_PAGES and not self._owner_ok():
+            if not OWNER_PASSWORD:
+                return self._send(403, {"error": "Owner pages are off on this server. Set OWNER_PASSWORD to use them."})
+            return self._send(401, {"error": "Owner password required."}, headers=[("WWW-Authenticate", 'Basic realm="UAply owner"')])
         if api:
             try:
                 if p == "/api/jobs":
@@ -110,7 +135,9 @@ class H(http.server.SimpleHTTPRequestHandler):
             return self._send(404, {"error": "not found"})
         # Only accept requests made by this site's own pages (blocks cross-site forms and scripts).
         origin = self.headers.get("Origin")
-        if origin != "http://" + (self.headers.get("Host") or ""):
+        host = self.headers.get("Host") or ""
+        if origin not in ("http://" + host, "https://" + host) or (PUBLIC and origin != "https://" + host and
+                                                                  self.headers.get("X-Forwarded-Proto") == "https"):
             return self._send(403, {"error": "cross-site request refused"})
         try:
             n = int(self.headers.get("Content-Length") or 0)
@@ -122,6 +149,8 @@ class H(http.server.SimpleHTTPRequestHandler):
         except Exception:
             return self._send(400, {"error": "bad request"})
         ip = self.client_address[0]
+        if PUBLIC and self.headers.get("X-Forwarded-For"):          # behind the host's proxy: the visitor's own address
+            ip = self.headers["X-Forwarded-For"].split(",")[0].strip()[:64] or ip
         try:
             if p == "/api/auth/signup":
                 code, out, token = auth_api.signup(payload.get("email"), payload.get("password"), ip, payload.get("agree"))
@@ -153,6 +182,15 @@ class H(http.server.SimpleHTTPRequestHandler):
 
     def end_headers(self):
         self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
+        self.send_header("X-Frame-Options", "SAMEORIGIN")               # the app frames itself; other sites may not
+        if self.headers.get("X-Forwarded-Proto") == "https":
+            self.send_header("Strict-Transport-Security", "max-age=31536000")
         super().end_headers()
 
-http.server.ThreadingHTTPServer(("127.0.0.1", port), H).serve_forever()
+    def log_message(self, fmt, *args):
+        if not PUBLIC:                                                   # keep request logs out of a host's logs (they hold IPs)
+            super().log_message(fmt, *args)
+
+http.server.ThreadingHTTPServer((BIND, port), H).serve_forever()

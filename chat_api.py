@@ -74,7 +74,7 @@ SCHEMA = {
 def init(instance):
     """Each instance (sandbox, dev) keeps its own feedback in data/<instance>/."""
     global DATA
-    DATA = os.path.join(ROOT, "data", re.sub(r"[^A-Za-z0-9_-]", "", instance) or "default")
+    DATA = os.path.join(uaply_api.data_root(), re.sub(r"[^A-Za-z0-9_-]", "", instance) or "default")
     with _lock:
         FEEDBACK.clear()
         try:

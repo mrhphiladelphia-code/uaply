@@ -52,7 +52,7 @@ def init(instance):
     """Each instance (sandbox, dev) keeps its own accounts in data/<instance>/aply.db."""
     global _path, _name
     _name = re.sub(r"[^A-Za-z0-9_-]", "", instance) or "default"
-    folder = os.path.join(ROOT, "data", _name)
+    folder = os.path.join(os.environ.get("UAPLY_DATA_DIR") or os.path.join(ROOT, "data"), _name)
     os.makedirs(folder, exist_ok=True)
     _path = os.path.join(folder, "uaply.db")
     with _lock, _db() as c:
