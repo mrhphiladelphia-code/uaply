@@ -1,0 +1,177 @@
+<title>UAply Store Cover</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+/* Layout: wide store banner on top, then a row of three phone screens. Colors and shapes copied from the live UAply app. */
+:root{
+  --bg:#FFF5F1; --surface:#FFFFFF; --ink:#2A0A22; --muted:#7C5864; --line:#F1DAD6;
+  --accent:#E5337F; --accent2:#FFB45E; --yes:#0B8F62; --yes-bg:#DCF5EA; --no:#E03A45; --no-bg:#FDE5E6; --mid:#A86400; --mid-bg:#FCEFD0;
+  --page:#F7E9E6; --display:'Bricolage Grotesque','Segoe UI',sans-serif; --body:'DM Sans','Segoe UI',sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --page:#14040F; color-scheme:dark}}
+:root[data-theme="dark"]{--page:#14040F; color-scheme:dark}
+/* The phone screens always show the app's light theme, so the mockups keep fixed tokens above. */
+body{background:var(--page);color:var(--ink);font:16px/1.5 var(--body);padding-inline:16px}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) body{color:#E6F4F8}}
+:root[data-theme="dark"] body{color:#E6F4F8}
+main{max-width:1040px;margin:0 auto;padding-block:28px 56px;display:flex;flex-direction:column;gap:28px}
+h2{font-family:var(--display);font-size:1.3rem;margin:0 0 4px}
+.sub{margin:0;opacity:.75;font-size:.92rem}
+
+/* ---------- store banner ---------- */
+.banner{position:relative;overflow:hidden;border-radius:20px;color:#fff;
+  background:linear-gradient(120deg,#26081F 0%,#4A1236 55%,#8E2350 100%);
+  display:grid;grid-template-columns:1.1fr .9fr;gap:12px;align-items:center;padding:36px 40px 0;min-height:420px}
+.banner .copy{padding-bottom:40px;min-width:0}
+.mark{display:block;width:64px;height:64px;margin-bottom:16px}
+.mark svg{width:64px;height:64px;border-radius:16px}
+.banner h1{font:800 clamp(2.2rem,5.4vw,3.6rem)/1.02 var(--display);margin:0 0 14px;text-wrap:balance}
+.banner p{margin:0 0 18px;font-size:1.1rem;max-width:34ch;opacity:.95}
+.who{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
+.who li{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);border-radius:99px;padding:5px 13px;font-size:.88rem;font-weight:500}
+.banner .phonewrap{align-self:end;display:flex;justify-content:center;min-width:0}
+.banner .phone{width:225px;transform:translateY(20px) rotate(3deg)}
+
+/* ---------- phone mockup ---------- */
+.phone{text-align:left;width:250px;aspect-ratio:9/18.5;background:#1A0615;border-radius:34px;padding:9px;box-shadow:0 30px 50px -22px rgba(0,30,50,.6);flex:none}
+.screen{background:var(--bg);color:var(--ink);border-radius:26px;height:100%;overflow:hidden;display:flex;flex-direction:column;padding:12px 11px;gap:8px;position:relative}
+.bar{display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:6px;font:800 15px var(--display)}
+.brand i{display:block;width:20px;height:20px}
+.brand svg{width:20px;height:20px}
+.tabs{display:flex;gap:2px;background:#fff;border:1px solid var(--line);border-radius:99px;padding:2px;font-size:9px;font-weight:700}
+.tabs span{padding:3px 7px;border-radius:99px;color:var(--muted)} .tabs .on{background:var(--accent);color:#fff}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px;box-shadow:0 14px 34px -16px rgba(90,20,60,.4);flex:1;min-height:0;position:relative}
+.chead{display:flex;gap:9px;align-items:center}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 15px var(--display);flex:none}
+.chead h3{margin:0;font:800 14px/1.1 var(--display)} .chead p{margin:1px 0 0;font-size:10.5px;color:var(--muted)}
+.pay{font:800 19px var(--display);color:var(--accent)} .pay small{font:500 9.5px var(--body);color:var(--muted);margin-left:4px}
+.facts{display:flex;gap:5px;font-size:9.5px;font-weight:600;margin-top:3px}
+.facts span{background:var(--bg);border-radius:99px;padding:2px 8px;color:var(--muted)}
+.score{display:flex;align-items:center;gap:9px;background:var(--yes-bg);border-radius:12px;padding:7px 9px}
+.score.mid{background:var(--mid-bg)}
+.ring{position:relative;width:38px;height:38px;flex:none}
+.ring svg{width:38px;height:38px;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:6}.ring .bgc{stroke:rgba(0,0,0,.1)}.ring .fg{stroke:var(--yes);stroke-linecap:round}
+.mid .ring .fg{stroke:var(--mid)}
+.ring b{position:absolute;inset:0;display:grid;place-items:center;font:800 10.5px var(--display)}
+.score span{font-size:10px;font-weight:600;line-height:1.25}
+.crit{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px;font-size:9.5px}
+.crit li{display:grid;grid-template-columns:14px 1fr auto;gap:5px;align-items:center}
+.dot{width:13px;height:13px;border-radius:50%;display:grid;place-items:center;font-size:8px;font-weight:800;color:#fff;background:var(--yes)}
+.dot.p{background:var(--mid)} .dot.n{background:var(--no)}
+.crit em{font-style:normal;color:var(--muted)}
+.stamp{position:absolute;top:44px;right:12px;border:2.5px solid var(--yes);color:var(--yes);border-radius:7px;padding:1px 8px;font:800 14px var(--display);transform:rotate(10deg);letter-spacing:.06em;background:rgba(255,255,255,.7)}
+.actions{display:flex;justify-content:center;align-items:flex-end;gap:16px;padding-top:2px}
+.act{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:8.5px;font-weight:700;color:var(--muted)}
+.rb{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:#fff;border:2px solid var(--line);box-shadow:0 8px 16px -8px rgba(90,20,60,.45)}
+.rb svg{width:20px;height:20px;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.rb.no{border-color:var(--no)} .rb.no svg{stroke:var(--no)} .rb.yes{background:var(--yes);border-color:var(--yes)} .rb.yes svg{stroke:#fff}
+.rb.small{width:30px;height:30px} .rb.small svg{stroke:var(--muted);width:14px;height:14px}
+
+/* ---------- screens row ---------- */
+.shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px 16px;justify-items:center}
+.shot{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;min-width:0}
+.shot b{font:800 1.05rem var(--display)} .shot span{font-size:.88rem;opacity:.75;max-width:28ch}
+.panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:9px;display:flex;flex-direction:column;gap:6px}
+.panel h4{margin:0;font:800 11px var(--display)}
+.li{display:flex;align-items:center;gap:7px;font-size:10px}
+.li .logo{width:24px;height:24px;font-size:11px;border-radius:7px}
+.li div:not(.logo){flex:1;min-width:0}.li b{display:block;font-size:10.5px}.li small{color:var(--muted)}
+.pill{font-weight:800;font-size:9.5px;padding:2px 7px;border-radius:99px;background:var(--yes-bg);color:var(--yes)}
+.pill.m{background:var(--mid-bg);color:var(--mid)}
+.stats3{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;text-align:center}
+.stats3 div{background:var(--bg);border-radius:9px;padding:6px 2px}.stats3 b{display:block;font:800 16px var(--display);color:var(--accent)}.stats3 small{font-size:8.5px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:4px}.chips span{font-size:9px;background:var(--bg);border-radius:99px;padding:2px 7px;color:var(--muted)}.chips .h{background:var(--yes-bg);color:var(--yes);font-weight:700}
+@media (max-width:760px){
+  .banner{grid-template-columns:1fr;padding:28px 20px 0;min-height:0}
+  .banner .phonewrap{order:2}
+  .banner .phone{transform:translateY(40px) rotate(0)}
+  .banner .copy{padding-bottom:12px}
+}
+</style>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="uaply-ic" viewBox="0 0 100 100"><defs><linearGradient id="ib" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3A0F2E"/><stop offset=".55" stop-color="#26081F"/><stop offset="1" stop-color="#5A1228"/></linearGradient><linearGradient id="ig" x1="0" y1="0" x2="1" y2="0.3"><stop offset="0" stop-color="#F43F8E"/><stop offset=".5" stop-color="#FB7F76"/><stop offset="1" stop-color="#FFC56B"/></linearGradient></defs><rect width="100" height="100" rx="24" fill="url(#ib)"/><path d="M30.5 29.5v26a19.5 19.5 0 0 0 39 0v-26" fill="none" stroke="url(#ig)" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/><text x="50" y="52" text-anchor="middle" font-family="Trebuchet MS,sans-serif" font-weight="800" font-size="9.5" fill="url(#ig)">APLY</text></symbol></svg><main>
+  <header>
+    <h2>UAply store cover</h2>
+    <p class="sub">Uses the new UAply icon and its plum, pink and amber colors, on the live app layout. Use the banner for the app store listing, social posts and the Kickstarter header image.</p>
+  </header>
+
+  <section class="banner" aria-label="Store banner">
+    <div class="copy">
+      <span class="mark"><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#uaply-ic"/></svg></span>
+      <h1>Swipe right.<br>Get the job.</h1>
+      <p>One swipe saves a job and starts your application. Free for everybody.</p>
+      <ul class="who" aria-label="Who it is for">
+        <li>Students</li><li>Interns</li><li>Call center</li><li>Career changers</li><li>Anyone</li>
+      </ul>
+    </div>
+    <div class="phonewrap">
+      <div class="phone"><div class="screen">
+        <div class="bar"><div class="brand"><i><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#uaply-ic"/></svg></i>UAply</div><div class="tabs"><span class="on">Jobs</span><span>Applied</span></div></div>
+        <div class="card">
+          <div class="stamp">APPLY</div>
+          <div class="chead"><div class="logo" style="background:hsl(190 60% 40%)">B</div><div><h3>Customer Support Rep</h3><p>Brightpath Schools</p></div></div>
+          <div><div class="pay">$38K–$46K<small>per year</small></div><div class="facts"><span>Remote (US)</span><span>Remote</span></div></div>
+          <div class="score"><div class="ring"><svg viewBox="0 0 64 64"><circle class="bgc" cx="32" cy="32" r="26"/><circle class="fg" cx="32" cy="32" r="26" stroke-dasharray="150 163"/></svg><b>92%</b></div><span>Strong match for what they ask for</span></div>
+          <ul class="crit">
+            <li><span class="dot">✓</span><span>Experience</span><em>1 yr · you have 2</em></li>
+            <li><span class="dot">✓</span><span>Education</span><em>High school</em></li>
+            <li><span class="dot p">~</span><span>Skills</span><em>3 of 4</em></li>
+          </ul>
+        </div>
+        <div class="actions">
+          <div class="act"><div class="rb no"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></svg></div>Pass</div>
+          <div class="act"><div class="rb small"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/></svg></div>Undo</div>
+          <div class="act"><div class="rb yes"><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></svg></div>Apply</div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Screens for the store listing</h2>
+    <p class="sub" style="margin-bottom:16px">Three screens: find, track, improve. Example jobs and people only.</p>
+    <div class="shots">
+      <div class="shot">
+        <div class="phone"><div class="screen">
+          <div class="bar"><div class="brand"><i><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#uaply-ic"/></svg></i>UAply</div><div class="tabs"><span class="on">Jobs</span><span>Applied</span></div></div>
+          <div class="card">
+            <div class="chead"><div class="logo" style="background:hsl(20 60% 46%)">P</div><div><h3>Operations Manager</h3><p>Pinecone Kitchens</p></div></div>
+            <div><div class="pay">$70K–$90K<small>per year</small></div><div class="facts"><span>New York</span><span>Onsite</span></div></div>
+            <div class="score mid"><div class="ring"><svg viewBox="0 0 64 64"><circle class="bgc" cx="32" cy="32" r="26"/><circle class="fg" cx="32" cy="32" r="26" stroke-dasharray="118 163"/></svg><b>72%</b></div><span>Good match, a few gaps</span></div>
+            <div class="chips"><span class="h">Scheduling</span><span class="h">Excel</span><span>Budgeting</span><span>Hiring</span></div>
+            <p style="margin:0;font-size:9.5px;color:var(--muted)">Run daily operations for three busy kitchens and a team of twenty.</p>
+          </div>
+          <div class="actions"><div class="act"><div class="rb no"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></svg></div>Pass</div><div class="act"><div class="rb yes"><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></svg></div>Apply</div></div>
+        </div></div>
+        <b>Every card shows how well you fit</b><span>Clear score, clear reasons. No guessing.</span>
+      </div>
+
+      <div class="shot">
+        <div class="phone"><div class="screen">
+          <div class="bar"><div class="brand"><i><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#uaply-ic"/></svg></i>UAply</div><div class="tabs"><span>Jobs</span><span class="on">Applied</span></div></div>
+          <div class="panel"><h4>Your progress</h4><div class="stats3"><div><b>14</b><small>Applied</small></div><div><b>81%</b><small>Avg match</small></div><div><b>96%</b><small>Best</small></div></div></div>
+          <div class="panel" style="flex:1"><h4>Best matches waiting</h4>
+            <div class="li"><div class="logo" style="background:hsl(150 55% 40%)">L</div><div><b>Dispatcher</b><small>Larkspur Health</small></div><span class="pill">94%</span></div>
+            <div class="li"><div class="logo" style="background:hsl(260 50% 52%)">M</div><div><b>Shift Supervisor</b><small>Marlow Logistics</small></div><span class="pill">89%</span></div>
+            <div class="li"><div class="logo" style="background:hsl(340 55% 48%)">A</div><div><b>Sales Associate</b><small>Ashgrove Retail</small></div><span class="pill">85%</span></div>
+            <div class="li"><div class="logo" style="background:hsl(30 70% 44%)">J</div><div><b>Content Assistant</b><small>Juniper Press</small></div><span class="pill m">71%</span></div>
+          </div>
+        </div></div>
+        <b>Track every application</b><span>See what you applied to and your best next matches.</span>
+      </div>
+
+      <div class="shot">
+        <div class="phone"><div class="screen">
+          <div class="bar"><div class="brand"><i><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#uaply-ic"/></svg></i>UAply</div><div class="tabs"><span>Jobs</span><span class="on">Profile</span></div></div>
+          <div class="panel"><h4>Fill this in once</h4><p style="margin:0;font-size:9.5px;color:var(--muted)">Every job is scored against your profile.</p>
+            <div class="li"><div class="logo" style="background:var(--accent)">AJ</div><div><b>Alex Johnson</b><small>Customer service · 2 yrs</small></div></div>
+          </div>
+          <div class="panel"><h4>Your skills</h4><div class="chips"><span class="h">Customer service</span><span class="h">Phone support</span><span class="h">Scheduling</span><span class="h">Excel</span><span class="h">Spanish</span></div></div>
+          <div class="panel"><h4>What you want</h4><div class="chips"><span>Remote or hybrid</span><span>$40K+</span><span>Philadelphia</span></div></div>
+        </div></div>
+        <b>Set up once, apply anywhere</b><span>No resume rewriting. Your details go with each application.</span>
+      </div>
+    </div>
+  </section>
+</main>
