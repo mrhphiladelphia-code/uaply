@@ -1056,6 +1056,9 @@ function apply(w,host){
       h+='<h3 style="font-size:15px">Back up</h3><p class="note" style="margin:0">Your profile, applications and details in one file you keep.</p><div class="acts"><button type="button" class="btn" data-a="exp">Download backup (JSON)</button><button type="button" class="btn ghost" data-csv="1">Applications (CSV)</button></div>'+
         '<h3 style="font-size:15px">Restore</h3><input type="file" id="aImp" accept=".json,application/json"><small>Replaces what is on this device with the file. Only files made by UAply are accepted.</small>'+
         '<h3 style="font-size:15px">Privacy</h3><p class="note" style="margin:0">Everything above is stored in this browser only. In sandbox, applications go to a simulated inbox unless you turned on live sending.</p>'+
+        '<h3 style="font-size:15px">Legal</h3><p class="note" style="margin:0">The rules and promises behind UAply. These are drafts that a lawyer has not reviewed yet.</p>'+
+        '<div class="legallist" style="display:flex;flex-direction:column;gap:6px">'+[["terms.html","Terms of Service","The rules for using UAply."],["privacy.html","Privacy Policy","What we collect, who sees it, and your rights."],["ai-and-employment.html","AI and matching","How the match score works and what it is not."],["copyright.html","Copyright and content","Ownership, job listing sources, fonts, and takedown requests."],["index.html","All legal pages","Everything in one place."]]
+          .map(function(l){return '<a class="btn ghost" data-legal="'+l[0]+'" href="'+LB+l[0]+'" target="_blank" rel="noopener noreferrer" style="display:block;text-align:left;text-decoration:none"><b>'+l[1]+'</b><br><small>'+l[2]+'</small></a>'}).join("")+'</div>'+
         '<h3 style="font-size:15px">Delete everything</h3><button type="button" class="btn ghost" data-a="wipe" style="align-self:flex-start">Delete all my data</button>';
     }
     acctSec.innerHTML=h+'<p class="note" id="aMsg" role="status"></p>';
@@ -1206,14 +1209,29 @@ function apply(w,host){
   w.fetch("/api/auth/me",{credentials:"same-origin"}).then(function(r){if(!r.ok)throw new Error("no auth");return r.json()}).then(function(j){
     SRV.up=true;SRV.user=j.user||null;paintHeader();
     if(!acctSec.hidden&&sub.prof==="account")renderAcct("account");
+    googleReturn();
   }).catch(function(){SRV.up=false;paintHeader()});
   w.fetch("/api/apply/config").then(function(r){return r.ok?r.json():null}).then(function(j){if(j&&j.mode)SRV.mode=j.mode}).catch(function(){});
+  w.fetch("/api/auth/providers").then(function(r){return r.ok?r.json():null}).then(function(j){
+    SRV.google=!!(j&&j.google);
+    if(SRV.google&&!acctSec.hidden&&sub.prof==="account")renderAcct("account");
+  }).catch(function(){});
+  var GERR={agree:"Tick the box to confirm you are 18 or older and agree to the Terms and Privacy Policy, then try Google again.",cancelled:"Google sign-in was cancelled.",expired:"That Google sign-in expired or could not be checked. Try again.",failed:"Google sign-in did not work. Try again, or use your email and password.",unverified:"Google says that email address is not verified, so UAply cannot use it.",off:"Google sign-in is not switched on."};
+  function googleReturn(){
+    var tp=null,q=null;
+    try{tp=w.top;q=new w.URLSearchParams(tp.location.search)}catch(e){return}
+    var er=q.get("auth_error"),ok=q.get("signed_in");
+    if(!er&&!ok)return;
+    try{tp.history.replaceState(null,"",tp.location.pathname)}catch(e){}
+    sub.prof="account";cur="prof";go("prof");renderAcct("account");
+    msg(er?(GERR[er]||GERR.failed):"Signed in with Google.");
+  }
   w.__uaplyAuth=function(){return {up:SRV.up,user:SRV.user}};
   function serverHTML(){
     if(SRV.user)return '<div class="plan" style="display:flex;flex-direction:column;gap:8px"><span class="tag" style="background:var(--accent);color:var(--accent-ink)">ACCOUNT</span><b>You are signed in</b><small>'+E(SRV.user.email)+' · saved on UAply\'s server</small>'+
       '<p class="note" style="margin:0">Every time you swipe right, a receipt goes to this email'+(SRV.mode==="live"?'':' (test mode: it lands in the <a href="/outbox" target="_blank" rel="noopener noreferrer">test inbox</a> instead)')+'.</p>'+
       '<div class="acts"><button type="button" class="btn ghost" data-auth="sout">Sign out</button><button type="button" class="btn ghost" data-auth="sdel">Delete account</button></div>'+
-      (AUI.delOpen?'<div class="field"><label for="sDelPw">Enter your password to delete your account</label><input type="password" id="sDelPw" autocomplete="current-password" maxlength="128"><small>This removes your account, your receipts and your application records on UAply\'s server. It cannot be undone. Your profile on this device stays until you delete it in Data and privacy.</small></div>'+
+      (AUI.delOpen?'<div class="field"><label for="sDelPw">'+(SRV.user.hasPassword===false?'Type DELETE to delete your account':'Enter your password to delete your account')+'</label><input type="'+(SRV.user.hasPassword===false?'text':'password')+'" id="sDelPw" autocomplete="'+(SRV.user.hasPassword===false?'off':'current-password')+'" maxlength="128"><small>This removes your account, your receipts and your application records on UAply\'s server. It cannot be undone. Your profile on this device stays until you delete it in Data and privacy.</small></div>'+
         '<div class="acts"><button type="button" class="btn" data-auth="sdelgo">Delete my account</button><button type="button" class="btn ghost" data-auth="sdelno">Keep my account</button></div>':'')+
       '</div>';
     var up=AUI.sMode!=="in";
@@ -1223,7 +1241,8 @@ function apply(w,host){
       (up?'<div class="field"><label for="sPw2">Confirm password</label><input type="password" id="sPw2" autocomplete="new-password" maxlength="128"></div>'+
         '<div class="checks"><label><input type="checkbox" id="sAgree"> I am 18 or older and agree to the <a href="'+LB+'terms.html" target="_blank" rel="noopener noreferrer">Terms</a> and <a href="'+LB+'privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a></label></div>':'')+
       '<div class="acts"><button type="button" class="btn" data-auth="ssubmit">'+(up?"Create account":"Log in")+'</button><button type="button" class="btn ghost" data-auth="smode">'+(up?"I already have an account":"Create an account")+'</button></div>'+
-      '<small>Your account is stored on UAply\'s server. Passwords are scrambled (hashed) and never stored as typed. Once you are signed in, each swipe right emails you a receipt.</small></div>';
+      '<small>Your account is stored on UAply\'s server. Passwords are scrambled (hashed) and never stored as typed. Once you are signed in, each swipe right emails you a receipt.</small>'+
+      (SRV.google?'<p class="note" style="text-align:center;margin:0">or</p><div class="checks"><label><input type="checkbox" id="gAgree"> I am 18 or older and agree to the <a href="'+LB+'terms.html" target="_blank" rel="noopener noreferrer">Terms</a> and <a href="'+LB+'privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a> (needed the first time)</label></div><div class="acts"><button type="button" class="btn" data-auth="gsign" style="width:100%">Continue with Google</button></div><small>You sign in on Google\'s own page. UAply never sees your Google password, only your verified email.</small>':'')+'</div>';
   }
   function accountHTML(){
     var u=session(),h="";
@@ -1286,14 +1305,22 @@ function apply(w,host){
     if(a==="sdelno"){AUI.delOpen=false;renderAcct("account");return}
     if(a==="sdelgo"){
       var dpw=(d.getElementById("sDelPw")||{}).value||"";
-      if(!dpw){msg("Enter your password.");return}
+      var nopw=SRV.user&&SRV.user.hasPassword===false;
+      if(!dpw){msg(nopw?"Type DELETE to confirm.":"Enter your password.");return}
       b.disabled=true;msg("Deleting your account…");
-      apiPost("/api/auth/delete",{password:dpw}).then(function(r){
+      apiPost("/api/auth/delete",nopw?{confirm:dpw}:{password:dpw}).then(function(r){
         b.disabled=false;
         if(!r.ok){msg((r.j&&r.j.error)||"Could not delete the account. Try again.");return}
         SRV.user=null;AUI.delOpen=false;paintHeader();renderAcct("account");
         msg("Your account was deleted"+(r.j.applicationsRemoved?", along with "+r.j.applicationsRemoved+" application record"+(r.j.applicationsRemoved===1?"":"s")+" on the server":"")+".");
       });
+      return;
+    }
+    if(a==="gsign"){
+      var ga=(d.getElementById("gAgree")||{}).checked;
+      b.disabled=true;msg("Opening Google…");
+      var gu="/api/auth/google/start"+(ga?"?agree=1":"");
+      try{w.top.location.assign(gu)}catch(e){w.location.assign(gu)}
       return;
     }
     if(a==="google"||a==="apple"){signIn(a,{email:"test."+a+"@example.test",name:"Test user"});return}

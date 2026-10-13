@@ -10,7 +10,10 @@ Serves ROOT; each urlpath=file alias maps one URL to a file outside ROOT (e.g. /
   POST /api/auth/signup   create an account (email + password) and sign in
   POST /api/auth/login    sign in
   POST /api/auth/logout   sign out
-  POST /api/auth/delete   delete the signed-in account (password required) and forget its application records
+  POST /api/auth/delete   delete the signed-in account (password required, or typing DELETE for a Google-only account)
+  GET  /api/auth/providers      which sign-in methods are on (google_auth.py)
+  GET  /api/auth/google/start   "Continue with Google": send the browser to Google
+  GET  /api/auth/google/callback  Google returns here; signs the person in and goes back to the app
   GET  /api/chat/config   whether the assistant's AI answers are on (chat_api.py)
   POST /api/chat          UAply Assistant: answer a support question from the help articles
   POST /api/feedback      store feedback sent through the assistant
@@ -44,7 +47,7 @@ if api:
                      ("/uaply-chat.js", "shared/uaply-chat.js"), ("/help/articles.json", "help/articles.json"),
                      ("/prod-index.html", "prod/index.html")):
         alias.setdefault(url, os.path.join(HERE, rel))
-    import jobs_api, uaply_api, auth_api, chat_api
+    import jobs_api, uaply_api, auth_api, chat_api, google_auth
     uaply_api.init(os.path.basename(root))
     auth_api.init(os.path.basename(root))
     chat_api.init(os.path.basename(root))
@@ -87,6 +90,43 @@ class H(http.server.SimpleHTTPRequestHandler):
         age = auth_api.SESSION_SECONDS if token else 0
         return [("Set-Cookie", "%s=%s; HttpOnly; SameSite=Lax; Path=/; Max-Age=%d%s" % (auth_api.cookie_name(), token, age, secure))]
 
+    def _origin_parts(self):
+        host = self.headers.get("Host") or "localhost"
+        return host, ("https" if self.headers.get("X-Forwarded-Proto") == "https" else "http")
+
+    def _redirect(self, where, headers=()):
+        self.send_response(302)
+        self.send_header("Location", where)
+        self.send_header("Content-Length", "0")
+        for k, v in headers:
+            self.send_header(k, v)
+        self.end_headers()
+
+    def _oauth_cookie(self, value):
+        secure = "; Secure" if (self.headers.get("X-Forwarded-Proto") == "https") else ""
+        return ("Set-Cookie", "%s_oauth=%s; HttpOnly; SameSite=Lax; Path=/api/auth/google; Max-Age=%d%s" % (
+            auth_api.cookie_name(), value, 600 if value else 0, secure))
+
+    def _google(self, p):
+        """The two redirects of "Continue with Google"."""
+        import urllib.parse
+        q = urllib.parse.parse_qs(self.path.split("?", 1)[1] if "?" in self.path else "")
+        host, proto = self._origin_parts()
+        if p == "/api/auth/google/start":
+            url, state = google_auth.start(host, proto, (q.get("agree") or [""])[0] == "1")
+            if not url:
+                return self._redirect("/?auth_error=off")
+            return self._redirect(url, [self._oauth_cookie(state)])
+        jar = http.cookies.SimpleCookie(self.headers.get("Cookie") or "")
+        cname = auth_api.cookie_name() + "_oauth"
+        err, ident, agreed = google_auth.finish(q, jar[cname].value if cname in jar else "", host, proto)
+        if err:
+            return self._redirect("/?auth_error=" + err, [self._oauth_cookie("")])
+        err, user, token = auth_api.oauth_login(ident["provider"], ident["subject"], ident["email"], agreed)
+        if err:
+            return self._redirect("/?auth_error=" + err, [self._oauth_cookie("")])
+        return self._redirect("/?signed_in=google", self._cookie(token) + [self._oauth_cookie("")])
+
     def _owner_ok(self):
         """Owner pages: open on this computer; on a public server only with OWNER_PASSWORD (any username)."""
         if not PUBLIC:
@@ -120,6 +160,10 @@ class H(http.server.SimpleHTTPRequestHandler):
                     return self._send(200, uaply_api.outbox_html(), "text/html; charset=utf-8")
                 if p == "/api/auth/me":
                     return self._send(200, {"user": auth_api.user_for(self._token())})
+                if p == "/api/auth/providers":
+                    return self._send(200, google_auth.public_config(*self._origin_parts()))
+                if p in ("/api/auth/google/start", "/api/auth/google/callback"):
+                    return self._google(p)
                 if p == "/api/chat/config":
                     return self._send(200, chat_api.public_config())
                 if p == "/feedback":
@@ -162,7 +206,7 @@ class H(http.server.SimpleHTTPRequestHandler):
                 auth_api.logout(self._token())
                 return self._send(200, {"ok": True}, headers=self._cookie(""))
             if p == "/api/auth/delete":
-                code, out, uid = auth_api.delete_account(self._token(), payload.get("password"), ip)
+                code, out, uid = auth_api.delete_account(self._token(), payload.get("password"), ip, payload.get("confirm") or "")
                 if uid:
                     out["applicationsRemoved"] = uaply_api.forget_user(uid)
                     chat_api.forget_user(uid)

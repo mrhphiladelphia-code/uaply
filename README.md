@@ -72,3 +72,15 @@ Real jobs and application sending need `serve.py --api` running somewhere.
      but only you can merge.
    - **Trusted people, directly:** Settings, Collaborators, invite them. They can push branches and open pull requests.
    - Do not give strangers direct write access. This code can send email and handles applicants' details.
+
+
+## Sign in with Google (free)
+
+Accounts work with email and password out of the box. To also offer "Continue with Google":
+
+1. In Google Cloud Console, create a project, then APIs and Services, Credentials, Create OAuth client ID, type Web application.
+2. Add the redirect URI shown at `/api/auth/providers` (locally `http://localhost:8766/api/auth/google/callback`, on a host `https://your-site/api/auth/google/callback`).
+3. Put the client ID and secret under `"google"` in the git-ignored `uaply-config.json` (see `uaply-config.example.json`) and restart.
+
+Without those keys the Google button is hidden. `python tools/mock-google.py` and `python tools/test-google.py` test the whole flow
+without a Google account; `node tools/cdp.js tools/ui-sweep.js` walks every screen in a headless browser.

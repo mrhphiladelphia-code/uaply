@@ -4,6 +4,7 @@ Where it keeps things: a SQLite file at data/<instance>/uaply.db (git-ignored, n
   users      email (unique), salted password hash, created and last-login times, when Terms were accepted
   sessions   hashed session tokens with an expiry
   user_mail  the receipts UAply sends to applicants (simulated in test mode)
+  identities "Continue with Google" logins: provider + the provider's stable user id, linked to a user
 
 How it keeps them safe:
   * Passwords are never stored. Only a per-user random salt and a PBKDF2-HMAC-SHA256 hash (600,000 rounds).
@@ -49,7 +50,7 @@ def cookie_name():
 
 
 def init(instance):
-    """Each instance (sandbox, dev) keeps its own accounts in data/<instance>/aply.db."""
+    """Each instance (sandbox, dev) keeps its own accounts in data/<instance>/uaply.db."""
     global _path, _name
     _name = re.sub(r"[^A-Za-z0-9_-]", "", instance) or "default"
     folder = os.path.join(os.environ.get("UAPLY_DATA_DIR") or os.path.join(ROOT, "data"), _name)
@@ -78,10 +79,18 @@ def init(instance):
             status TEXT NOT NULL,
             at INTEGER NOT NULL);
         """)
-        try:
-            c.execute("ALTER TABLE users ADD COLUMN terms_at INTEGER")   # databases made before this column existed
-        except sqlite3.OperationalError:
-            pass
+        c.execute("""CREATE TABLE IF NOT EXISTS identities(
+            provider TEXT NOT NULL,
+            subject TEXT NOT NULL,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            email TEXT NOT NULL,
+            created_at INTEGER NOT NULL,
+            PRIMARY KEY(provider, subject))""")
+        for col in ("terms_at INTEGER", "has_password INTEGER NOT NULL DEFAULT 1"):      # databases made before these columns existed
+            try:
+                c.execute("ALTER TABLE users ADD COLUMN " + col)
+            except sqlite3.OperationalError:
+                pass
 
 
 class _db:
@@ -127,7 +136,7 @@ def _new_session(c, user_id):
 
 
 def public_user(row):
-    return {"id": row["id"], "email": row["email"]}
+    return {"id": row["id"], "email": row["email"], "hasPassword": bool(row["has_password"])}
 
 
 def signup(email, password, ip, agree=False):
@@ -156,7 +165,7 @@ def signup(email, password, ip, agree=False):
                 token = _new_session(c, uid)
         except sqlite3.IntegrityError:
             return 409, {"error": "That email already has an account. Log in instead."}, None
-    return 200, {"user": {"id": uid, "email": email}}, token
+    return 200, {"user": {"id": uid, "email": email, "hasPassword": True}}, token
 
 
 def login(email, password, ip):
@@ -186,14 +195,15 @@ def user_for(token):
     if not isinstance(token, str) or not (20 <= len(token) <= 100):
         return None
     with _lock, _db() as c:
-        row = c.execute("SELECT u.id, u.email FROM sessions s JOIN users u ON u.id=s.user_id "
+        row = c.execute("SELECT u.id, u.email, u.has_password FROM sessions s JOIN users u ON u.id=s.user_id "
                         "WHERE s.token_hash=? AND s.expires_at>?",
                         (hashlib.sha256(token.encode()).hexdigest(), int(time.time()))).fetchone()
     return public_user(row) if row else None
 
 
-def delete_account(token, password, ip):
-    """Delete the signed-in account after re-checking the password. Returns (status, body, deleted_user_id_or_None)."""
+def delete_account(token, password, ip, confirm=""):
+    """Delete the signed-in account after re-checking the password (or, for an account made with Google that has no
+    password, after typing DELETE). Returns (status, body, deleted_user_id_or_None)."""
     user = user_for(token)
     if not user:
         return 401, {"error": "You are not signed in."}, None
@@ -203,7 +213,10 @@ def delete_account(token, password, ip):
             return 429, {"error": "Too many tries. Wait a few minutes and try again."}, None
         with _db() as c:
             row = c.execute("SELECT * FROM users WHERE id=?", (user["id"],)).fetchone()
-        if not row or not isinstance(password, str) or not hmac.compare_digest(_hash(password, bytes(row["salt"])), bytes(row["hash"])):
+        if row and not row["has_password"]:
+            if confirm != "DELETE":
+                return 400, {"error": "Type DELETE to confirm."}, None
+        elif not row or not isinstance(password, str) or not hmac.compare_digest(_hash(password, bytes(row["salt"])), bytes(row["hash"])):
             _fails[key].append(time.time())
             return 401, {"error": "That password is not right."}, None
         with _db() as c:
@@ -232,3 +245,31 @@ def counts():
     with _lock, _db() as c:
         return {"users": c.execute("SELECT COUNT(*) FROM users").fetchone()[0],
                 "mail": c.execute("SELECT COUNT(*) FROM user_mail").fetchone()[0]}
+
+
+def oauth_login(provider, subject, email, agree=False):
+    """Sign in (or sign up) with an identity a provider has already proven. Returns (error_code_or_None, user_or_None, token).
+
+    Known identity: sign in. Verified email that already has an account: link the identity to it and sign in. Otherwise
+    create an account with no password (has_password=0); that needs `agree` (18 or older, Terms and Privacy Policy)."""
+    email = _clean_email(email)
+    if not email or not isinstance(subject, str) or not subject:
+        return "failed", None, None
+    with _lock:
+        with _db() as c:
+            row = c.execute("SELECT u.* FROM identities i JOIN users u ON u.id=i.user_id WHERE i.provider=? AND i.subject=?",
+                            (provider, subject)).fetchone()
+            now = int(time.time())
+            if not row:
+                row = c.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+                if not row:
+                    if agree is not True:
+                        return "agree", None, None
+                    cur = c.execute("INSERT INTO users(email, salt, hash, created_at, last_login, terms_at, has_password) VALUES(?,?,?,?,?,?,0)",
+                                    (email, secrets.token_bytes(16), secrets.token_bytes(32), now, now, now))
+                    row = c.execute("SELECT * FROM users WHERE id=?", (cur.lastrowid,)).fetchone()
+                c.execute("INSERT OR IGNORE INTO identities(provider, subject, user_id, email, created_at) VALUES(?,?,?,?,?)",
+                          (provider, subject, row["id"], email, now))
+            c.execute("UPDATE users SET last_login=? WHERE id=?", (now, row["id"]))
+            token = _new_session(c, row["id"])
+    return None, public_user(row), token
