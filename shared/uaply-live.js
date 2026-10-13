@@ -53,6 +53,8 @@ function apply(w,host){
 
   var el=host&&(host.getElementById("note")||host.getElementById("what"));
   function say(m){if(el)el.textContent=m}
+  var REL=!!((host&&host.defaultView&&host.defaultView.UAplyOpts)||{}).release;
+  if(REL)w.__uaplyHideSamples=true;      /* a release build never shows the made-up example listings, even before real ones load */
   say("Loading real postings…");
   return fetch("/api/jobs").then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json()}).then(function(data){
     var now=Date.now(),fresh=(data.jobs||[]).map(function(j){j.seen=now;return j});
@@ -64,7 +66,7 @@ function apply(w,host){
     writeCache(all);
     var src=Object.keys(data.sources||{}).map(function(k){return k+": "+data.sources[k]}).join(" · ");
     say("Real postings: "+fresh.length+" loaded ("+added+" new). "+src);
-  }).catch(function(e){say("Could not load real postings ("+e.message+"). Showing the example jobs.")});
+  }).catch(function(e){say(REL?"Could not load jobs ("+e.message+"). Check your connection and try again.":"Could not load real postings ("+e.message+"). Showing the example jobs.")});
 }
 
 /* ---------------- kit + submit ---------------- */

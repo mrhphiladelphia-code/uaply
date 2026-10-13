@@ -17,6 +17,8 @@ services:
         value: 0.0.0.0
       - key: UAPLY_DATA_DIR
         value: /var/data
+      - key: UAPLY_FEEDS              # real postings from employers' own public career pages (link-out only). Remove this line to switch them off.
+        value: greenhouse,lever,ashby
       - key: ANTHROPIC_API_KEY        # turns on AI answers in the assistant; swap it any time without a code change
         sync: false
       - key: OWNER_PASSWORD           # protects /outbox and /feedback

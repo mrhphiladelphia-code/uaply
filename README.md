@@ -100,3 +100,14 @@ land in the test inbox at `/outbox` instead of reaching real people.
 
 Tests: `python tools/test-reset.py`, `python tools/test-google.py` (with `tools/mock-google.py`), `node tools/cdp.js tools/ui-reset.js`
 and `node tools/cdp.js tools/ui-sweep.js`.
+
+
+## Release build (dev)
+
+`dev` is what users get; `sandbox` is the test bench. Details and the owner's launch checklist are in `DEPLOY.md`, version notes in
+`CHANGELOG.md`. The hosted GitHub Pages copy of dev is a static preview with no server (no accounts, no real jobs); run
+`python serve.py 8767 dev --api` or deploy to Render for the real thing. To test the release build:
+
+    node check.js
+    W=390 H=844 PORT=8767 node tools/cdp.js tools/ui-release.js
+    REL=1 PORT=8767 node tools/cdp.js tools/ui-sweep.js

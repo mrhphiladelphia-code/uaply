@@ -1,5 +1,30 @@
 # Putting UAply online and in the app stores
 
+**`dev` is the release build.** It has no developer bar, no test labels, no simulated sign-in, no example companies and no paid
+plans, and it starts every new profile blank. `sandbox` is the test bench and keeps all of that. See `CHANGELOG.md`.
+
+## Before real users: your checklist
+1. **Host the server** (section 1 below). Until then nothing is online: the phone app's address returns 404.
+2. **Google sign-in (free):** create an OAuth client at console.cloud.google.com/apis/credentials (Web application, consent screen
+   External, then Publish app), add the redirect URI shown at `/setup`, then run `python tools/setup-config.py` (or put the values
+   in `UAPLY_CONFIG_JSON` on Render). If you switch Google on you must also build Sign in with Apple before the iPhone app ships
+   (App Store guideline 4.8). Until then the app hides the Google button on iPhone by itself.
+3. **Email** (password resets, receipts): create a Gmail App Password (needs 2-Step Verification) or use a transactional email
+   service, then run `python tools/setup-config.py`. `/setup` has a "Send test email" button. Without it, reset links only reach
+   the test inbox, so a real person cannot reset a password.
+4. **Real jobs:** `render.yaml` sets `UAPLY_FEEDS=greenhouse,lever,ashby` for dev (link-out only: UAply never emails those
+   employers). Those boards are public, but their terms do not clearly cover aggregators; have your attorney confirm, or remove the
+   line to switch them off. USAJOBS (free key) is the cleanest official source if you want to add one.
+5. **Legal pages:** fill every yellow blank in `legal/` (company legal name, street address, contact and privacy email, launch date,
+   DMCA agent, liability amount, governing state and county, how long records are kept, host, response time) and have a lawyer
+   review them. They say "draft, not reviewed by a lawyer" until you do.
+6. **Apple:** Developer Program ($99/year), a Mac or a cloud Mac build service for `mobile/ios`, App Privacy answers, a demo
+   account for the reviewers, and a support URL. Apple may reject apps that only wrap a website, so show the phone features
+   (reminders, vibration, share sheet).
+7. **Name:** a pending trademark filing for APLY (recruitment app) overlaps "UAply". Get a clearance search before spending on
+   branding. See `LEGAL-REVIEW.md`.
+
+
 ## 1. Website (Render)
 1. Push this repository to GitHub (the `sandbox` and `dev` branches).
 2. At render.com: sign up, then **New > Blueprint** and pick this repository. It reads `render.yaml` and creates

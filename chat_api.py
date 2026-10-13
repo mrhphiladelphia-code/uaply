@@ -71,9 +71,14 @@ SCHEMA = {
 }
 
 
+RELEASE = False        # the release build (dev) answers from the release wording and hides test-only articles
+
+
 def init(instance):
     """Each instance (sandbox, dev) keeps its own feedback in data/<instance>/."""
-    global DATA
+    global DATA, RELEASE
+    RELEASE = instance == "dev" or os.environ.get("UAPLY_RELEASE") == "1"
+    _help["mtime"] = None
     DATA = os.path.join(uaply_api.data_root(), re.sub(r"[^A-Za-z0-9_-]", "", instance) or "default")
     with _lock:
         FEEDBACK.clear()
@@ -101,10 +106,14 @@ def articles():
             try:
                 with open(HELP_PATH, encoding="utf-8") as f:
                     raw = json.load(f).get("articles", [])
+                def rel(a):
+                    r = a.get("release") if isinstance(a.get("release"), dict) else {}
+                    return r if RELEASE else {}
                 _help["articles"] = [
                     {"id": _s(a.get("id"), 60), "title": _s(a.get("title"), 120), "tags": _s(a.get("tags"), 400),
-                     "body": _s(a.get("body"), 1500), "go": _s(a.get("go"), 40)}
-                    for a in raw if isinstance(a, dict) and a.get("id") and a.get("title") and a.get("body")]
+                     "body": _s(rel(a).get("body") or a.get("body"), 1500), "go": _s(a.get("go"), 40)}
+                    for a in raw if isinstance(a, dict) and a.get("id") and a.get("title") and a.get("body")
+                    and not rel(a).get("hide")]
                 _help["mtime"] = mtime
             except Exception:
                 pass
